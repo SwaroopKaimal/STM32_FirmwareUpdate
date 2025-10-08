@@ -36,6 +36,15 @@
 #define C_UART &huart2 /* Virtual Communication UART - For BL Commands (C)*/
 
 #define BL_RX_LEN 200
+
+#define FLASH_BOOTLOADER 	0x08008000 /* Bank 1 - Boot loader 32KB*/
+#define FLASH_FIRMWARE1 	0x08008000 /* Bank 1 - 480KB */
+#define FLASH_FIRMWARE2 	0x08080000 /* Bank 2 - 512KB */
+
+/* FLASH Active Bank Macros */
+#define FLASH_ACTIVE_BANK1 		1
+#define FLASH_ACTIVE_BANK2		2
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -51,6 +60,21 @@ UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 uint8_t bl_rx_buffer[BL_RX_LEN];
+
+uint8_t supported_commands[] = {
+                                 BL_GET_VER ,
+                                 BL_GET_HELP,
+                                 BL_GET_CID,
+                                 BL_GET_RDP_STATUS,
+                                 BL_GO_TO_ADDR,
+                                 BL_FLASH_ERASE,
+                                 BL_MEM_WRITE,
+                                 BL_READ_SECTOR_P_STATUS,
+								 BL_CHECK_UPDATE,
+								 BL_FIRMWARE_UPDATE};
+
+/* Variable to store the active firmware bank number - (ideally) to be preserved even after powering off*/
+uint8_t active_bank = FLASH_ACTIVE_BANK1; //Temporarily initialized to Bank1
 
 /* USER CODE END PV */
 
@@ -376,18 +400,18 @@ void bootloader_jump_to_user_app()
 	 * according to ARM-Cortex Architecture */
 
 	/*1. Configure the Main Stack Pointer (MSP) by reading the value form the flash base address of desired sector*/
-	uint32_t msp_value = *(volatile uint32_t*)FLASH_BANK_2;
+	uint32_t msp_value = *(volatile uint32_t*)FLASH_FIRMWARE1;
 
 	/* Set MSP function from CMSIS*/
 	__set_MSP(msp_value);
 
 	/* Re-map vector table to user application base address */
-	SCB->VTOR = FLASH_BANK_2; /* System Control Block - Vector Table Offset Register */
+	SCB->VTOR = FLASH_FIRMWARE1; /* System Control Block - Vector Table Offset Register */
 
 	/* 2. Now fetch the reset handler address of the user application
 	 * from the location FLASH_SECTOR2_BASE_ADDRESS + 4 (32bits)*/
 	void (*app_reset_handler)(void); /*A function pointer to hold the address of reset handler*/
-	uint32_t resethandler_address = *(volatile uint32_t*)(FLASH_BANK_2 + 4);
+	uint32_t resethandler_address = *(volatile uint32_t*)(FLASH_FIRMWARE1 + 4);
 	app_reset_handler = (void*) resethandler_address;
 
 	/*3. Jumping to the reset handler of user application - Now this address will be loaded into the Program Counter*/
@@ -454,7 +478,7 @@ void bootloader_handle_getver_cmd(uint8_t *bl_rx_buffer)
 	uint32_t command_packet_len = bl_rx_buffer[0] + 1; /*Length to follow + First byte*/
 
 	/*Extract the 4 bytes of CRC32 sent by the host*/
-	uint32_t host_crc = *(uint32_t*)(bl_rx_buffer + command_packet_len - 4); /* CRC is always 32 bits (4 bytes) here */
+	uint32_t host_crc = *((uint32_t*)(bl_rx_buffer + command_packet_len - 4)); /* CRC is always 32 bits (4 bytes) here */
 
 	/*Verify checksum*/
 	printmsg("BL_DEBUG_MSG: bootloader_handle_getver_cmd\n\r");
@@ -475,51 +499,125 @@ void bootloader_handle_getver_cmd(uint8_t *bl_rx_buffer)
 
 }
 
-void bootloader_handle_gethelp_cmd(uint8_t *pBuffer)
+void bootloader_handle_gethelp_cmd(uint8_t *bl_rx_buffer)
 {
-    // TODO: Handle "Get Help" command
+    /* Handle "Get Help" command */
+	printmsg("BL_DEBUG_MSG:bootloader_handle_gethelp_cmd\n");
+
+	uint32_t command_packet_len = bl_rx_buffer[0] + 1;
+
+	uint32_t host_crc = *((uint32_t*)(bl_rx_buffer + command_packet_len - 4));
+
+	if(! bootloader_verify_crc(&bl_rx_buffer[0], command_packet_len - 4, host_crc))
+	{
+		printmsg("BL_DEBUG_MSG:checksum success !!\n");
+		bootloader_send_ack(sizeof(supported_commands));
+		bootloader_uart_write_data(supported_commands, sizeof(supported_commands));
+
+	}else{
+		printmsg("BL_DEBUG_MSG:checksum fail !!\n");
+		bootloader_send_nack();
+	}
 }
 
-void bootloader_handle_getcid_cmd(uint8_t *pBuffer)
+void bootloader_handle_getcid_cmd(uint8_t *bl_rx_buffer)
 {
-    // TODO: Handle "Get Chip ID" command
+    /* Handle "Get Chip ID" command */
+	printmsg("BL_DEBUG_MSG:bootloader_handle_getcid_cmd\n");
+
+	uint16_t bl_cid_num = 0;
+
+	uint32_t command_packet_len = bl_rx_buffer[0] + 1;
+
+	uint32_t host_crc = *((uint32_t*)(bl_rx_buffer + command_packet_len - 4));
+
+	if(! bootloader_verify_crc(&bl_rx_buffer[0], command_packet_len - 4, host_crc))
+	{
+		printmsg("BL_DEBUG_MSG:checksum success !!\n");
+		bootloader_send_ack(2);
+		bl_cid_num = get_mcu_chip_id();
+		printmsg("BL_DEBUG_MSG:MCU id : %d %#x !!\n",bl_cid_num, bl_cid_num);
+		bootloader_uart_write_data((uint8_t*)&bl_cid_num, 2);
+	}else{
+		printmsg("BL_DEBUG_MSG:checksum fail !!\n");
+		bootloader_send_nack();
+	}
 }
 
-void bootloader_handle_getrdp_cmd(uint8_t *pBuffer)
+void bootloader_handle_getrdp_cmd(uint8_t *bl_rx_buffer)
 {
-    // TODO: Handle "Get Read Protection Level" command
+    /* Handle "Get Read Protection Level" command */
+	printmsg("BL_DEBUG_MSG:bootloader_handle_getrdp_cmd\n");
+
+	uint8_t rdp_level = 0x00;
+
+	//Total length of the command packet
+	uint32_t command_packet_len = bl_rx_buffer[0]+1 ;
+
+	//extract the CRC32 sent by the Host
+	uint32_t host_crc = *((uint32_t * ) (bl_rx_buffer+command_packet_len - 4) ) ;
+
+	if (! bootloader_verify_crc(&bl_rx_buffer[0],command_packet_len-4,host_crc))
+	{
+		printmsg("BL_DEBUG_MSG:checksum success !!\n");
+		bootloader_send_ack(1);
+		rdp_level = get_flash_rdp_level();
+		printmsg("BL_DEBUG_MSG:RDP level: %d %#x\n",rdp_level,rdp_level);
+		bootloader_uart_write_data(&rdp_level, 1);
+
+	}else{
+		printmsg("BL_DEBUG_MSG:checksum fail !!\n");
+		bootloader_send_nack();
+	}
 }
 
 uint8_t execute_flash_erase(uint8_t page_number, uint8_t number_of_pages)
 {
-    // TODO: Execute flash erase routine
+    /* Execute flash erase routine */
     return 0; // return appropriate status
 }
 
-void bootloader_handle_mem_write_cmd(uint8_t *pBuffer)
+void bootloader_handle_mem_write_cmd(uint8_t *bl_rx_buffer)
 {
-    // TODO: Handle "Memory Write" command
+    /* Handle "Memory Write" command */
 }
 
-void bootloader_handle_flash_erase_cmd(uint8_t *pBuffer)
+void bootloader_handle_flash_erase_cmd(uint8_t *bl_rx_buffer)
 {
-    // TODO: Handle "Flash Erase" command
+    /* Handle "Flash Erase" command */
 }
 
-void bootloader_handle_mem_read(uint8_t *pBuffer)
+void bootloader_handle_en_rw_protect(uint8_t *bl_rx_buffer)
 {
-    // TODO: Handle "Memory Read" command
+    /* Handle "Enable Read/Write Protection" command */
 }
 
-void bootloader_handle_en_rw_protect(uint8_t *pBuffer)
+void bootloader_handle_dis_rw_protect(uint8_t *bl_rx_buffer)
 {
-    // TODO: Handle "Enable Read/Write Protection" command
+    /* Handle "Disable Read/Write Protection" command */
 }
 
-void bootloader_handle_dis_rw_protect(uint8_t *pBuffer)
+uint8_t bootloader_check_update(void)
 {
-    // TODO: Handle "Disable Read/Write Protection" command
+
+	return 0;
 }
+
+void bootloader_handle_firmware_update(void)
+{
+	/*Download onto Inactive bank (1 or 2 - create a global variable for this)
+	 * Verify new firmware with appropriate methods
+	 * Set MSP and VTOR to new firmware bank and declare that bank as active
+	 * Can include read-write protection
+	 * Split into different functions if required*/
+
+}
+
+void bootloader_show_active_bank(void)
+{
+	bootloader_uart_write_data((uint8_t*)&active_bank, 1);
+}
+
 
 void bootloader_send_nack(void)
 {
@@ -564,6 +662,39 @@ void bootloader_uart_write_data(uint8_t *pBuffer,uint32_t len)
 uint8_t get_bootloader_version()
 {
 	return (uint8_t)BL_VERSION;
+}
+
+uint16_t get_mcu_chip_id(void)
+{
+	/* RM: The STM32L47x/L48x/L49x/L4Ax MCUs integrate an MCU ID code. This ID identifies the
+	   ST MCU part-number and the die revision. It is part of the DBG_MCU component and is
+	   mapped on the external PPB bus (see Section 48.16 on page 1832). This code is
+	   accessible using the JTAG debug port (4 to 5 pins) or the SW debug port (two pins) or by
+	   the user software. It is even accessible while the MCU is under system reset.
+	 */
+
+	uint16_t cid;
+	/* Reading the register and masking the unnecessary bits */
+	cid = (uint16_t)(DBGMCU->IDCODE) & 0x0FFF;
+	return cid;
+}
+
+uint8_t get_flash_rdp_level(void)
+{
+	/* !!! VERY IMPORTANT !!!! */
+	/*
+	 * LEVEL 2 (No debug mode): Option bytes cannot be programmed nor erased. Thus, the level 2 cannot be removed at all:
+	 * it is an IRREVERSIBLE operation. 'DO NOT USE' Level 2, it is for end user products.
+	 *
+	 * When decreased from 'Level 1 to Level 0', the FLASH goes into MASS ERASE.
+	 *
+	 * */
+	/*HAL Implementation*/
+	uint8_t rdp_status = 0;
+	FLASH_OBProgramInitTypeDef ob_handle;
+	HAL_FLASHEx_OBGetConfig(&ob_handle);
+	rdp_status = (uint8_t)ob_handle.RDPLevel;
+	return rdp_status;
 }
 
 

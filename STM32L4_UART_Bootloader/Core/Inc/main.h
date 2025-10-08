@@ -73,10 +73,10 @@ void bootloader_handle_go_cmd(uint8_t *pBuffer);
 uint8_t execute_flash_erase(uint8_t page_number , uint8_t number_of_pages);
 void bootloader_handle_mem_write_cmd(uint8_t *pBuffer);
 void bootloader_handle_flash_erase_cmd(uint8_t *pBuffer);
-void bootloader_handle_mem_read (uint8_t *pBuffer);
 void bootloader_handle_en_rw_protect(uint8_t *pBuffer);
 void bootloader_handle_dis_rw_protect(uint8_t *pBuffer);
 
+uint8_t bootloader_check_update(void);
 void bootloader_handle_firmware_update(void);
 
 void bootloader_send_ack(uint8_t follow_len);
@@ -85,6 +85,11 @@ void bootloader_send_nack(void);
 uint8_t bootloader_verify_crc (uint8_t *pData, uint32_t len,uint32_t crc_host);
 uint8_t get_bootloader_version(void);
 void bootloader_uart_write_data(uint8_t *pBuffer,uint32_t len);
+
+void bootloader_show_active_bank(void);
+
+uint16_t get_mcu_chip_id(void);
+uint8_t get_flash_rdp_level(void);
 
 /* USER CODE END EFP */
 
@@ -163,17 +168,16 @@ void bootloader_uart_write_data(uint8_t *pBuffer,uint32_t len);
 //This command is used to enable or disable read/write protect on different sectors of the user flash .
 #define BL_EN_RW_PROTECT    	0x58
 
-//This command is used to read data from different memories of the microcontroller.
-#define BL_MEM_READ       		0x59
-
 //This command is used to read all the sector protection status.
 #define BL_READ_SECTOR_P_STATUS 0x5A
 
-//This command is used to read the OTP contents.
-#define BL_OTP_READ       		0x5B
-
 //This command is used disable all sector read/write protection
 #define BL_DIS_R_W_PROTECT      0x5C
+
+//Firmware and update related commands
+#define BL_CHECK_UPDATE			0x60
+
+#define BL_FIRMWARE_UPDATE		0x61
 
 
 /* ACK and NACK bytes*/
@@ -193,6 +197,8 @@ void bootloader_uart_write_data(uint8_t *pBuffer,uint32_t len);
 #define SRAM1_SIZE            256*1024
 #define SRAM1_END             (SRAM1_BASE + SRAM1_SIZE)
 #define SRAM2_END             (SRAM2_BASE + SRAM2_SIZE)
+
+
 
 /* USER CODE END Private defines */
 
