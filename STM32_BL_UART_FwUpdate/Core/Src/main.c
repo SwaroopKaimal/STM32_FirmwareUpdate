@@ -75,7 +75,6 @@ uint8_t supported_commands[] = {
 
 /* Variable to store the active firmware bank number - To be preserved even after powering off
  * One method: one dedicated page (2KB) in FLASH for configuration data - meta-data*/
-uint8_t active_bank = FLASH_ACTIVE_BANK1; //Temporarily initialized to Bank1
 
 /* USER CODE END PV */
 
@@ -128,18 +127,43 @@ int main(void)
   MX_CRC_Init();
   /* USER CODE BEGIN 2 */
 
-  /*If button is pressed, go to boot loader mode*/
+  /*If button is pressed*/
   if(HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_SET)
   {
-	  printmsg("BL_DEBUG_MSG: Button pressed.. entering BL mode\n\r");
+	  printmsg("BL_DEBUG_MSG: Button pressed. Checking for firmware updates.\n\r");
 
-	  /*Continuously check for user inputs to the boot loader*/
-	  bootloader_uart_read_data();
+	  /* Function to return the version available on the host application */
+	  uint8_t available_version = fetch_available_firmware_version();
+	  printmsg("BL_DEBUG_MSG: Fetched version: %d \n\r", available_version);
+
+	  /* Check if the user needs to update firmware, get input via Debug UART */
+	  printmsg("BL_DEBUG_MSG: Update Firmware? Y/n \n\r");
+	  uint8_t update_option;
+	  HAL_UART_Receive(D_UART, &update_option, 1, HAL_MAX_DELAY);
+	  if(update_option == 'Y' || update_option == 'y')
+	  {
+		  /*User requires a  firmware update */
+		  handle_firmware_update();
+
+	  }else if(update_option == 'N' || update_option == 'n')
+	  {
+		  /*User does not requires a firmware update, go to custom boot loader*/
+		  printmsg("BL_DEBUG_MSG: Update not required, entering boot loader mode \n\r");
+
+		  /*Continuously check for user inputs to the boot loader*/
+		  bootloader_uart_read_data();
+
+	  }else{
+		  printmsg("BL_DEBUG_MSG: Invalid option. Please reset the board. \n\r");
+		  while(1);
+
+	  }
+
   }else{
 
-	  printmsg("BL_DEBUG_MSG: Button not pressed.. executing user application\n\r");
+	  printmsg("BL_DEBUG_MSG: Button not pressed. Executing user application\n\r");
 
-	  bootloader_jump_to_user_app();
+	  bootloader_jump_to_active_bank(); /*Jump to the active bank binaries TODO: update logic VTOR etc..*/
   }
 
   /* USER CODE END 2 */
@@ -386,13 +410,15 @@ void printmsg(char *format, ...){/* The ... (ellipsis) means that more arguments
 #endif
 }
 
-void bootloader_jump_to_user_app()
+void bootloader_jump_to_active_bank()
 {
 	/* Flow of the function:
 	 * 1. Reads the applications’s initial MSP and sets it.
 	 * 2. Redirects interrupts by re-mapping VTOR.
 	 * 3. Fetches the application’s Reset_Handler address.
 	 * 4. Calls it, effectively jumping to the user application.
+	 *
+	 * TODO: Make a FLASH page for firmware meta data
 	 */
 
 	printmsg("BL_DEBUG_MSG:bootloader_jump_to_user_app\n");
@@ -572,11 +598,38 @@ void bootloader_handle_getrdp_cmd(uint8_t *bl_rx_buffer)
 	}
 }
 
-void bootloader_handle_flash_erase_cmd(uint8_t *bl_rx_buffer)
-{
-    /* Handle "Flash Erase" command */
+void bootloader_handle_flash_erase_cmd(uint8_t *pBuffer) {
 
+  uint8_t erase_status = 0x00;
+  printmsg("BL_DEBUG_MSG:bootloader_handle_flash_erase_cmd\n");
+
+  //Total length of the command packet
+  uint32_t command_packet_len = bl_rx_buffer[0]+1 ;
+
+  //extract the CRC32 sent by the Host
+  uint32_t host_crc = *((uint32_t * ) (bl_rx_buffer+command_packet_len - 4) ) ;
+
+  if (! bootloader_verify_crc(&bl_rx_buffer[0],command_packet_len-4,host_crc)) {
+
+    printmsg("BL_DEBUG_MSG:checksum success !!\n");
+    bootloader_send_ack(1);
+    printmsg("BL_DEBUG_MSG:initial_sector : %d  no_ofsectors: %d\n",pBuffer[2],pBuffer[3]);
+
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14,1);
+    erase_status = execute_flash_erase(pBuffer[2] , pBuffer[3]);
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14,0);
+
+    printmsg("BL_DEBUG_MSG: flash erase status: %#x\n",erase_status);
+
+    bootloader_uart_write_data(&erase_status,1);
+
+  } else {
+
+    printmsg("BL_DEBUG_MSG:checksum fail !!\n");
+    bootloader_send_nack();
+  }
 }
+
 
 void bootloader_handle_mem_write_cmd(uint8_t *bl_rx_buffer)
 {
@@ -596,9 +649,9 @@ void bootloader_handle_mem_write_cmd(uint8_t *bl_rx_buffer)
 	{
 		printmsg("BL_DEBUG_MSG:checksum success !!\n");
 		bootloader_send_ack(1);
-		printmsg("BL_DEBUG_MSG: mem write address : %#x\n",mem_address);
+		printmsg("BL_DEBUG_MSG: mem write address : %#x\n",mem_addr);
 
-		if( verify_address(mem_address) == ADDR_VALID ) {
+		if( verify_address(mem_addr) == ADDR_VALID ) {
 
 
 			printmsg("BL_DEBUG_MSG: valid mem write address\n");
@@ -607,7 +660,7 @@ void bootloader_handle_mem_write_cmd(uint8_t *bl_rx_buffer)
 			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14,1);
 
 			/* Execute memory write*/
-			write_status = execute_memory_write(&bl_rx_buffer[7], mem_address, payload_len);
+			write_status = execute_mem_write(&bl_rx_buffer[7], mem_addr, payload_len);
 
 			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14,0);
 
@@ -637,25 +690,6 @@ void bootloader_handle_dis_rw_protect(uint8_t *bl_rx_buffer)
 {
     /* Handle "Disable Read/Write Protection" command */
 }
-
-void bootloader_handle_firmware_update(void)
-{
-	/*Download onto Inactive bank (1 or 2 - create a global variable for this)
-	 * Fetch the new firmware version on the Host
-	 * Verify new firmware with appropriate methods
-	 * Set MSP and VTOR to new firmware bank and declare that bank as active
-	 * Can include read-write protection
-	 * Split into different functions if required
-	 *
-	 * Potential expansion: Use Wifi only for this part, other bootloader functions via UART*/
-
-}
-
-void bootloader_show_active_bank(void)
-{
-	bootloader_uart_write_data((uint8_t*)&active_bank, 1);
-}
-
 
 void bootloader_send_nack(void)
 {
@@ -735,23 +769,6 @@ uint8_t get_flash_rdp_level(void)
 	return rdp_status;
 }
 
-uint8_t execute_flash_erase(uint8_t page_number, uint8_t number_of_pages)
-{
-    /* Execute flash erase routine - Refer HAL FLASH EX codes for FLASH erase commands*/
-	FLASH_EraseInitTypeDef flashErase_handle;
-	uint32_t sectorError;
-	HAL_StatusTypeDef status;
-
-	if(number_of_pages > 511)
-		return INVALID_SECTOR;
-
-	if()
-
-
-
-
-    return 0; // return appropriate status
-}
 
 uint8_t verify_address(uint32_t go_address)
 {
@@ -771,16 +788,107 @@ uint8_t verify_address(uint32_t go_address)
 	return ADDR_INVALID;
 }
 
+uint8_t execute_flash_erase(uint8_t page_number , uint8_t number_of_pages) {
+
+  /*Refer HAL FLASH EX codes for FLASH erase commands*/
+
+  FLASH_EraseInitTypeDef flashErase_handle;
+  uint32_t sectorError;
+  HAL_StatusTypeDef status;
+
+
+  if( number_of_pages > 511 )
+    return INVALID_SECTOR;
+
+  if( (page_number == 0xff ) || (page_number <= 511) ) {
+    if(page_number == (uint8_t) 0xff) {
+    flashErase_handle.TypeErase = FLASH_TYPEERASE_MASSERASE;
+
+    } else {
+      /*Here we are just calculating how many sectors needs to erased */
+      uint8_t remanining_page = 511 - page_number;
+      if( number_of_pages > remanining_page) {
+
+    	  number_of_pages = remanining_page;
+      }
+      flashErase_handle.TypeErase = FLASH_TYPEERASE_PAGES; /*Macro from HAL*/
+      flashErase_handle.Page = page_number; // This is the initial page
+      flashErase_handle.NbPages = number_of_pages;
+    }
+    flashErase_handle.Banks = FLASH_BANK_1;
+
+    /*Get access to the flash registers, unlock them first */
+    HAL_FLASH_Unlock();
+    status = (uint8_t) HAL_FLASHEx_Erase(&flashErase_handle, &sectorError);
+    HAL_FLASH_Lock();
+
+    return status;
+  }
+
+  return INVALID_SECTOR;
+}
+
 uint8_t execute_mem_write(uint8_t *pBuffer, uint32_t mem_address, uint32_t len)
 {
 	/* Below code is for FLASH_TYPEPROGRAM_DOUBLEWORD logic - host application sends single word */
 
-	HAL_StatusTypeDef status = HAL_OK;
+    HAL_StatusTypeDef status = HAL_OK;
 
+    if ((mem_address & 0x7U) != 0U) return (uint8_t)HAL_ERROR; /* must be 8-byte aligned */
+    if (len == 0U) return (uint8_t)HAL_OK;
 
+    HAL_FLASH_Unlock();
+
+    for (uint32_t offset = 0; offset < len; offset += 8U) {
+        uint64_t data64 = 0ULL;
+        uint32_t chunk = ((len - offset) >= 8U) ? 8U : (len - offset);
+
+        /* pack available bytes (little-endian) */
+        for (uint32_t b = 0U; b < chunk; ++b) {
+            data64 |= ((uint64_t)pBuffer[offset + b]) << (8U * b);
+        }
+        /* pad remaining bytes with 0xFF if needed */
+        for (uint32_t b = chunk; b < 8U; ++b) {
+            data64 |= ((uint64_t)0xFFU) << (8U * b);
+        }
+
+        status = HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, mem_address + offset, data64);
+        if (status != HAL_OK) break;
+    }
+
+    HAL_FLASH_Lock();
+    return (uint8_t)status; /* 0 = HAL_OK */
+}
+
+uint8_t fetch_available_firmware_version(void)
+{
+	uint8_t version_request_command = 0x99;
+	uint8_t available_version;
+	bootloader_uart_write_data(&version_request_command, sizeof(version_request_command));
+	HAL_UART_Receive(C_UART, &available_version, 1, HAL_MAX_DELAY);
+	return available_version;
+}
+
+void handle_firmware_update(void)
+{
+	/*Download onto Inactive bank (1 or 2 - create a global variable for this)
+	 * Verify new firmware with appropriate methods
+	 * Set MSP and VTOR to new firmware bank and declare that bank as active
+	 * Can include read-write protection
+	 * Split into different functions if required
+	 *
+	 * Potential expansion: Use WiFi only for this part, other boot loader functions via UART
+	 *
+	 * TODO: Use boot loader memory write function*/
 
 }
 
+void bootloader_show_active_bank(void)
+{
+	/* Variable to store the active firmware bank number - To be preserved even after powering off
+	 * One method: one dedicated page (2KB) in FLASH for configuration data - meta-data*/
+	//bootloader_uart_write_data((uint8_t*)&active_bank, 1);
+}
 /* USER CODE END 4 */
 
 /**

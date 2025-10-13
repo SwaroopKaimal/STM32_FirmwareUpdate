@@ -34,34 +34,34 @@ $(wildcard ../makefile.init) \
 $(wildcard ../makefile.targets) \
 
 
-BUILD_ARTIFACT_NAME := STM32L4_UART_Bootloader
+BUILD_ARTIFACT_NAME := STM32_BL_UART_FwUpdate
 BUILD_ARTIFACT_EXTENSION := elf
 BUILD_ARTIFACT_PREFIX :=
 BUILD_ARTIFACT := $(BUILD_ARTIFACT_PREFIX)$(BUILD_ARTIFACT_NAME)$(if $(BUILD_ARTIFACT_EXTENSION),.$(BUILD_ARTIFACT_EXTENSION),)
 
 # Add inputs and outputs from these tool invocations to the build variables 
 EXECUTABLES += \
-STM32L4_UART_Bootloader.elf \
+STM32_BL_UART_FwUpdate.elf \
 
 MAP_FILES += \
-STM32L4_UART_Bootloader.map \
+STM32_BL_UART_FwUpdate.map \
 
 SIZE_OUTPUT += \
 default.size.stdout \
 
 OBJDUMP_LIST += \
-STM32L4_UART_Bootloader.list \
+STM32_BL_UART_FwUpdate.list \
 
 
 # All Target
 all: main-build
 
 # Main-build Target
-main-build: STM32L4_UART_Bootloader.elf secondary-outputs
+main-build: STM32_BL_UART_FwUpdate.elf secondary-outputs
 
 # Tool invocations
-STM32L4_UART_Bootloader.elf STM32L4_UART_Bootloader.map: $(OBJS) $(USER_OBJS) D:\EmbeddedSystems\Workspace_Firmware_Update\STM32L4_UART_Bootloader\STM32L496ZGTXP_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "STM32L4_UART_Bootloader.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"D:\EmbeddedSystems\Workspace_Firmware_Update\STM32L4_UART_Bootloader\STM32L496ZGTXP_FLASH.ld" --specs=nosys.specs -Wl,-Map="STM32L4_UART_Bootloader.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+STM32_BL_UART_FwUpdate.elf STM32_BL_UART_FwUpdate.map: $(OBJS) $(USER_OBJS) D:\EmbeddedSystems\Workspace_Firmware_Update\STM32_BL_UART_FwUpdate\STM32L496ZGTXP_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "STM32_BL_UART_FwUpdate.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"D:\EmbeddedSystems\Workspace_Firmware_Update\STM32_BL_UART_FwUpdate\STM32L496ZGTXP_FLASH.ld" --specs=nosys.specs -Wl,-Map="STM32_BL_UART_FwUpdate.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
@@ -70,14 +70,14 @@ default.size.stdout: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
 	@echo 'Finished building: $@'
 	@echo ' '
 
-STM32L4_UART_Bootloader.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "STM32L4_UART_Bootloader.list"
+STM32_BL_UART_FwUpdate.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-objdump -h -S $(EXECUTABLES) > "STM32_BL_UART_FwUpdate.list"
 	@echo 'Finished building: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) STM32L4_UART_Bootloader.elf STM32L4_UART_Bootloader.list STM32L4_UART_Bootloader.map default.size.stdout
+	-$(RM) STM32_BL_UART_FwUpdate.elf STM32_BL_UART_FwUpdate.list STM32_BL_UART_FwUpdate.map default.size.stdout
 	-@echo ' '
 
 secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST)

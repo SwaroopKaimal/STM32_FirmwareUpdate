@@ -58,13 +58,11 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
 
-void printmsg(char *format, ...);
-
 /*Boot loader function prototypes*/
-
 void bootloader_uart_read_data(void);
 void bootloader_jump_to_user_app(void);
 
+/*Boot loader command handling functions*/
 void bootloader_handle_getver_cmd(uint8_t *bl_rx_buffer);
 void bootloader_handle_gethelp_cmd(uint8_t *pBuffer);
 void bootloader_handle_getcid_cmd(uint8_t *pBuffer);
@@ -76,19 +74,23 @@ void bootloader_handle_flash_erase_cmd(uint8_t *pBuffer);
 void bootloader_handle_en_rw_protect(uint8_t *pBuffer);
 void bootloader_handle_dis_rw_protect(uint8_t *pBuffer);
 
-void bootloader_handle_firmware_update(void);
-
+/*Boot loader helper functions*/
+void printmsg(char *format, ...);
 void bootloader_send_ack(uint8_t follow_len);
 void bootloader_send_nack(void);
-
 uint8_t bootloader_verify_crc (uint8_t *pData, uint32_t len,uint32_t crc_host);
-uint8_t get_bootloader_version(void);
 void bootloader_uart_write_data(uint8_t *pBuffer,uint32_t len);
-
-void bootloader_show_active_bank(void);
-
+uint8_t get_bootloader_version(void);
 uint16_t get_mcu_chip_id(void);
 uint8_t get_flash_rdp_level(void);
+uint8_t verify_address(uint32_t go_address);
+uint8_t execute_mem_write(uint8_t *pBuffer, uint32_t mem_address, uint32_t len);
+
+/*Firmware update functions*/
+uint8_t fetch_available_firmware_version(void);
+void handle_firmware_update(void);
+void bootloader_show_active_bank(void); /*Function of the boot loader returns active bank number */
+
 
 /* USER CODE END EFP */
 
