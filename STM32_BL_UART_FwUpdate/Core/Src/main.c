@@ -40,6 +40,7 @@
 #define FLASH_BOOTLOADER 	0x08008000 /* Bank 1 - Boot loader 32KB*/
 #define FLASH_FIRMWARE1 	0x08008000 /* Bank 1 - 480KB */
 #define FLASH_FIRMWARE2 	0x08080000 /* Bank 2 - 512KB */
+#define FLASH_METADATA	 	0 /* Bank 2 - Page dedicated for meta data - last page */
 
 /* FLASH Active Bank Macros */
 #define FLASH_ACTIVE_BANK1 		1
@@ -54,7 +55,6 @@
 
 /* Private variables ---------------------------------------------------------*/
 CRC_HandleTypeDef hcrc;
-
 UART_HandleTypeDef hlpuart1;
 UART_HandleTypeDef huart2;
 
@@ -72,6 +72,8 @@ uint8_t supported_commands[] = {
                                  BL_READ_SECTOR_P_STATUS,
 								 BL_CHECK_UPDATE,
 								 BL_FIRMWARE_UPDATE};
+
+uint8_t active_bank_number; /*Variable to store active bank number ACTIVE_BANK_1 or ACTIVE_BANK_2*/
 
 /* Variable to store the active firmware bank number - To be preserved even after powering off
  * One method: one dedicated page (2KB) in FLASH for configuration data - meta-data*/
@@ -127,6 +129,8 @@ int main(void)
   MX_CRC_Init();
   /* USER CODE BEGIN 2 */
 
+  active_bank_number = fetch_active_bank_number();
+
   /*If button is pressed*/
   if(HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_SET)
   {
@@ -163,7 +167,7 @@ int main(void)
 
 	  printmsg("BL_DEBUG_MSG: Button not pressed. Executing user application\n\r");
 
-	  bootloader_jump_to_active_bank(); /*Jump to the active bank binaries TODO: update logic VTOR etc..*/
+	  bootloader_jump_to_active_bank(); /*Jump to the active bank binaries*/
   }
 
   /* USER CODE END 2 */
@@ -417,8 +421,6 @@ void bootloader_jump_to_active_bank()
 	 * 2. Redirects interrupts by re-mapping VTOR.
 	 * 3. Fetches the application’s Reset_Handler address.
 	 * 4. Calls it, effectively jumping to the user application.
-	 *
-	 * TODO: Make a FLASH page for firmware meta data
 	 */
 
 	printmsg("BL_DEBUG_MSG:bootloader_jump_to_user_app\n");
@@ -427,13 +429,27 @@ void bootloader_jump_to_active_bank()
 	 * according to ARM-Cortex Architecture */
 
 	/*1. Configure the Main Stack Pointer (MSP) by reading the value form the flash base address of desired sector*/
-	uint32_t msp_value = *(volatile uint32_t*)FLASH_FIRMWARE1;
+	/* Check which firmware bank is active and run active firmware bank*/
 
-	/* Set MSP function from CMSIS*/
-	__set_MSP(msp_value);
+	if(active_bank_number == FLASH_ACTIVE_BANK1)
+	{
 
-	/* Re-map vector table to user application base address */
-	SCB->VTOR = FLASH_FIRMWARE1; /* System Control Block - Vector Table Offset Register */
+		uint32_t msp_value = *(volatile uint32_t*)FLASH_FIRMWARE1;
+
+		/* Set MSP function from CMSIS*/
+		__set_MSP(msp_value);
+
+		/* Re-map vector table to user application base address */
+		SCB->VTOR = FLASH_FIRMWARE1; /* System Control Block - Vector Table Offset Register */
+
+	}else{
+
+		uint32_t msp_value = *(volatile uint32_t*)FLASH_FIRMWARE2;
+
+		__set_MSP(msp_value);
+
+		SCB->VTOR = FLASH_FIRMWARE2;
+	}
 
 	/* 2. Now fetch the reset handler address of the user application
 	 * from the location FLASH_SECTOR2_BASE_ADDRESS + 4 (32bits)*/
@@ -864,14 +880,17 @@ uint8_t fetch_available_firmware_version(void)
 {
 	uint8_t version_request_command = 0x99;
 	uint8_t available_version;
-	bootloader_uart_write_data(&version_request_command, sizeof(version_request_command));
+	bootloader_uart_write_data(&version_request_command, 1);
 	HAL_UART_Receive(C_UART, &available_version, 1, HAL_MAX_DELAY);
+	/*TODO: Add CRC verification for the received function*/
 	return available_version;
 }
 
 void handle_firmware_update(void)
 {
-	/*Download onto Inactive bank (1 or 2 - create a global variable for this)
+	/*Download onto Inactive bank (1 or 2 - create a global variable for this)*/
+
+	/*
 	 * Verify new firmware with appropriate methods
 	 * Set MSP and VTOR to new firmware bank and declare that bank as active
 	 * Can include read-write protection
@@ -881,14 +900,26 @@ void handle_firmware_update(void)
 	 *
 	 * TODO: Use boot loader memory write function*/
 
+	/*Update the active bank number*/
+
+}
+
+uint8_t fetch_active_bank_number(void)
+{
+	/*Fetch the active bank details from dedicated FLASH meta data page*/
+	return 0;
 }
 
 void bootloader_show_active_bank(void)
 {
 	/* Variable to store the active firmware bank number - To be preserved even after powering off
 	 * One method: one dedicated page (2KB) in FLASH for configuration data - meta-data*/
-	//bootloader_uart_write_data((uint8_t*)&active_bank, 1);
+	bootloader_uart_write_data((uint8_t*)&active_bank_number, 1);
 }
+
+
+
+
 /* USER CODE END 4 */
 
 /**

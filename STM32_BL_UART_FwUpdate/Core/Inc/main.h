@@ -60,7 +60,7 @@ void Error_Handler(void);
 
 /*Boot loader function prototypes*/
 void bootloader_uart_read_data(void);
-void bootloader_jump_to_user_app(void);
+void bootloader_jump_to_active_bank(void);
 
 /*Boot loader command handling functions*/
 void bootloader_handle_getver_cmd(uint8_t *bl_rx_buffer);
@@ -73,6 +73,7 @@ void bootloader_handle_mem_write_cmd(uint8_t *pBuffer);
 void bootloader_handle_flash_erase_cmd(uint8_t *pBuffer);
 void bootloader_handle_en_rw_protect(uint8_t *pBuffer);
 void bootloader_handle_dis_rw_protect(uint8_t *pBuffer);
+void bootloader_show_active_bank(void); /*Function of the boot loader returns active bank number */
 
 /*Boot loader helper functions*/
 void printmsg(char *format, ...);
@@ -86,10 +87,12 @@ uint8_t get_flash_rdp_level(void);
 uint8_t verify_address(uint32_t go_address);
 uint8_t execute_mem_write(uint8_t *pBuffer, uint32_t mem_address, uint32_t len);
 
-/*Firmware update functions*/
+/*Firmware update and related functions*/
 uint8_t fetch_available_firmware_version(void);
 void handle_firmware_update(void);
-void bootloader_show_active_bank(void); /*Function of the boot loader returns active bank number */
+uint8_t fetch_active_bank_number(void); /*Updates the global variable with the fetched active bank value from the FLASH*/
+void update_active_bank_number(uint8_t active_bank);
+
 
 
 /* USER CODE END EFP */
@@ -198,7 +201,6 @@ void bootloader_show_active_bank(void); /*Function of the boot loader returns ac
 #define SRAM1_SIZE            256*1024
 #define SRAM1_END             (SRAM1_BASE + SRAM1_SIZE)
 #define SRAM2_END             (SRAM2_BASE + SRAM2_SIZE)
-
 
 
 /* USER CODE END Private defines */
