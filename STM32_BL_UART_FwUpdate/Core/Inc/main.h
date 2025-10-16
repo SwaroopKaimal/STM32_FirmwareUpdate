@@ -68,7 +68,6 @@ void bootloader_handle_gethelp_cmd(uint8_t *pBuffer);
 void bootloader_handle_getcid_cmd(uint8_t *pBuffer);
 void bootloader_handle_getrdp_cmd(uint8_t *pBuffer);
 void bootloader_handle_go_cmd(uint8_t *pBuffer);
-uint8_t execute_flash_erase(uint8_t page_number , uint8_t number_of_pages);
 void bootloader_handle_mem_write_cmd(uint8_t *pBuffer);
 void bootloader_handle_flash_erase_cmd(uint8_t *pBuffer);
 void bootloader_handle_en_rw_protect(uint8_t *pBuffer);
@@ -85,6 +84,7 @@ uint8_t get_bootloader_version(void);
 uint16_t get_mcu_chip_id(void);
 uint8_t get_flash_rdp_level(void);
 uint8_t verify_address(uint32_t go_address);
+uint8_t execute_flash_erase(uint8_t page_number , uint8_t number_of_pages);
 uint8_t execute_mem_write(uint8_t *pBuffer, uint32_t mem_address, uint32_t len);
 
 /*Firmware update and related functions*/
@@ -179,9 +179,7 @@ void update_active_bank_number(uint8_t active_bank);
 #define BL_DIS_R_W_PROTECT      0x5C
 
 //Firmware and update related commands
-#define BL_CHECK_UPDATE			0x60
-
-#define BL_FIRMWARE_UPDATE		0x61
+#define BL_SHOW_ACTIVE_BANK		0x60
 
 
 /* ACK and NACK bytes*/

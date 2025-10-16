@@ -36,6 +36,7 @@
 #define C_UART &huart2 /* Virtual Communication UART - For BL Commands (C)*/
 
 #define BL_RX_LEN 200
+#define UPDATE_RX_BUFFER_LEN 200
 
 #define FLASH_BOOTLOADER 	0x08008000 /* Bank 1 - Boot loader 32KB*/
 #define FLASH_FIRMWARE1 	0x08008000 /* Bank 1 - 480KB */
@@ -70,8 +71,7 @@ uint8_t supported_commands[] = {
                                  BL_FLASH_ERASE,
                                  BL_MEM_WRITE,
                                  BL_READ_SECTOR_P_STATUS,
-								 BL_CHECK_UPDATE,
-								 BL_FIRMWARE_UPDATE};
+								 BL_SHOW_ACTIVE_BANK};
 
 uint8_t active_bank_number; /*Variable to store active bank number ACTIVE_BANK_1 or ACTIVE_BANK_2*/
 
@@ -129,12 +129,16 @@ int main(void)
   MX_CRC_Init();
   /* USER CODE BEGIN 2 */
 
+  /*Fetch the bank no. which has to be activated*/
   active_bank_number = fetch_active_bank_number();
-
+  printmsg("BL_DEBUG_MSG: Active Bank: %d \n\r", active_bank_number);
   /*If button is pressed*/
   if(HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_SET)
   {
 	  printmsg("BL_DEBUG_MSG: Button pressed. Checking for firmware updates.\n\r");
+
+	  /*Clear the RX buffer for firmware related functions TODO: Check this logic*/
+	  memset(bl_rx_buffer, 0, BL_RX_LEN);
 
 	  /* Function to return the version available on the host application */
 	  uint8_t available_version = fetch_available_firmware_version();
@@ -146,13 +150,13 @@ int main(void)
 	  HAL_UART_Receive(D_UART, &update_option, 1, HAL_MAX_DELAY);
 	  if(update_option == 'Y' || update_option == 'y')
 	  {
-		  /*User requires a  firmware update */
+		  /*User requires a firmware update */
 		  handle_firmware_update();
 
 	  }else if(update_option == 'N' || update_option == 'n')
 	  {
 		  /*User does not requires a firmware update, go to custom boot loader*/
-		  printmsg("BL_DEBUG_MSG: Update not required, entering boot loader mode \n\r");
+		  printmsg("BL_DEBUG_MSG: Update not required, entering bootloader mode \n\r");
 
 		  /*Continuously check for user inputs to the boot loader*/
 		  bootloader_uart_read_data();
@@ -160,7 +164,6 @@ int main(void)
 	  }else{
 		  printmsg("BL_DEBUG_MSG: Invalid option. Please reset the board. \n\r");
 		  while(1);
-
 	  }
 
   }else{
@@ -434,6 +437,8 @@ void bootloader_jump_to_active_bank()
 	if(active_bank_number == FLASH_ACTIVE_BANK1)
 	{
 
+		printmsg("BL_DEBUG_MSG: Firmware Bank 1 Active. \n");
+
 		uint32_t msp_value = *(volatile uint32_t*)FLASH_FIRMWARE1;
 
 		/* Set MSP function from CMSIS*/
@@ -444,6 +449,8 @@ void bootloader_jump_to_active_bank()
 
 	}else{
 
+		printmsg("BL_DEBUG_MSG: Firmware Bank 2 Active. \n");
+
 		uint32_t msp_value = *(volatile uint32_t*)FLASH_FIRMWARE2;
 
 		__set_MSP(msp_value);
@@ -452,7 +459,7 @@ void bootloader_jump_to_active_bank()
 	}
 
 	/* 2. Now fetch the reset handler address of the user application
-	 * from the location FLASH_SECTOR2_BASE_ADDRESS + 4 (32bits)*/
+	 * from the location FIRMWARE_BASE_ADDRESS + 4 (32bits)*/
 	void (*app_reset_handler)(void); /*A function pointer to hold the address of reset handler*/
 	uint32_t resethandler_address = *(volatile uint32_t*)(FLASH_FIRMWARE1 + 4);
 	app_reset_handler = (void*) resethandler_address;
@@ -502,6 +509,8 @@ void bootloader_uart_read_data()
 		case BL_DIS_R_W_PROTECT:
 			bootloader_handle_dis_rw_protect(bl_rx_buffer);
 			break;
+		case BL_SHOW_ACTIVE_BANK:
+			bootloader_show_active_bank();
 		default:
 			printmsg("BL_DEBUG_MSG:Invalid command code received from host \n");
 			break;
@@ -878,6 +887,8 @@ uint8_t execute_mem_write(uint8_t *pBuffer, uint32_t mem_address, uint32_t len)
 
 uint8_t fetch_available_firmware_version(void)
 {
+
+	/*TODO: Use RX buffer*/
 	uint8_t version_request_command = 0x99;
 	uint8_t available_version;
 	bootloader_uart_write_data(&version_request_command, 1);
@@ -888,19 +899,27 @@ uint8_t fetch_available_firmware_version(void)
 
 void handle_firmware_update(void)
 {
-	/*Download onto Inactive bank (1 or 2 - create a global variable for this)*/
+	/* Find the inactive bank address*/
+	uint32_t inactive_bank_adress;
+	inactive_bank_adress = (active_bank_number == FLASH_ACTIVE_BANK1) ? FLASH_FIRMWARE2 : FLASH_FIRMWARE1;
 
-	/*
-	 * Verify new firmware with appropriate methods
-	 * Set MSP and VTOR to new firmware bank and declare that bank as active
-	 * Can include read-write protection
+	/* Get the length and check if new firmware fit into the banks, <= 480KB (in terms of words) TODO: Add verification*/
+	//Get len from rx buffer
+
+	/* Erase the Inactive bank */
+
+	/* Download onto Inactive bank */
+
+
+	/* Can include read-write protection
 	 * Split into different functions if required
-	 *
 	 * Potential expansion: Use WiFi only for this part, other boot loader functions via UART
-	 *
-	 * TODO: Use boot loader memory write function*/
+	 * TODO: Use boot loader memory write function */
 
-	/*Update the active bank number*/
+	/*Update the active bank number in FLASH */
+	update_active_bank_number(inactive_bank_adress);
+
+
 
 }
 
@@ -915,6 +934,12 @@ void bootloader_show_active_bank(void)
 	/* Variable to store the active firmware bank number - To be preserved even after powering off
 	 * One method: one dedicated page (2KB) in FLASH for configuration data - meta-data*/
 	bootloader_uart_write_data((uint8_t*)&active_bank_number, 1);
+}
+
+void update_active_bank_number(uint8_t active_bank)
+{
+	/*Update the active bank number in FLASH page, after Firmware Update*/
+
 }
 
 
