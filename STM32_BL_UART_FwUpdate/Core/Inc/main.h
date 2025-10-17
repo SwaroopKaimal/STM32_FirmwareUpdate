@@ -89,9 +89,9 @@ uint8_t execute_mem_write(uint8_t *pBuffer, uint32_t mem_address, uint32_t len);
 
 /*Firmware update and related functions*/
 uint8_t fetch_available_firmware_version(void);
-void handle_firmware_update(void);
+uint8_t handle_firmware_update(void);
 uint8_t fetch_active_bank_number(void); /*Updates the global variable with the fetched active bank value from the FLASH*/
-void update_active_bank_number(uint8_t active_bank);
+uint8_t update_active_bank_number(uint8_t active_bank); /* This micro-controller writes in double word */
 
 
 

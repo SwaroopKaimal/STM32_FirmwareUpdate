@@ -3,6 +3,7 @@
 	<item key="hasShownOverlayPopupBefore" value="true"/>
 	<item key="replaceBarOpen" value="false"/>
 	<list key="searchhistory">
+		<item value="update_active_bank_number"/>
 		<item value="#"/>
 		<item value="execute_flash_erase"/>
 		<item value="_addr"/>
