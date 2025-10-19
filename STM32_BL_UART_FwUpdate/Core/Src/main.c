@@ -48,8 +48,9 @@
 #define FLASH_ACTIVE_BANK2		2
 
 /* FLASH Page for Meta data*/
-#define FLASH_METADATA_BASEADDR	0x080FF800
 #define FLASH_METADATA_PAGE		511
+#define FLASH_METADATA_BASEADDR	0x080FF800
+
 
 /* USER CODE END PD */
 
@@ -819,7 +820,7 @@ uint8_t verify_address(uint32_t go_address)
 	return ADDR_INVALID;
 }
 
-uint8_t execute_flash_erase(uint8_t page_number , uint8_t number_of_pages) {
+uint8_t execute_flash_erase(uint32_t page_number , uint32_t number_of_pages) {
 
   /*Refer HAL FLASH EX codes for FLASH erase commands*/
 
@@ -894,7 +895,7 @@ uint8_t execute_mem_write(uint8_t *pBuffer, uint32_t mem_address, uint32_t len)
 uint8_t fetch_available_firmware_version(void)
 {
 
-	/*TODO: Use RX buffer*/
+
 	uint8_t version_request_command = 0x99;
 	uint8_t available_version;
 	bootloader_uart_write_data(&version_request_command, 1);
@@ -908,19 +909,17 @@ uint8_t handle_firmware_update(void)
 	/* Find the inactive bank address*/
 	uint64_t inactive_bank_adress;
 	inactive_bank_adress = (active_bank_number == FLASH_ACTIVE_BANK1) ? FLASH_FIRMWARE2 : FLASH_FIRMWARE1;
+	uint32_t active_page_number = (active_bank_number == FLASH_ACTIVE_BANK1) ? 16 : 256;
 
-	/* Get the length and check if new firmware fit into the banks, <= 480KB (in terms of words) TODO: Add verification*/
-	//Get len from rx buffer
+	/* Get the length and check if new firmware fit into the banks, <= 480KB (in terms of words) TODO: Add verification, roll back, other features*/
+	uint8_t write_status = 0x00;
+	uint8_t payload_len = bl_rx_buffer[6];
 
 	/* Erase the Inactive bank */
+	execute_flash_erase(active_page_number , 240); /* Check flash erase logic*/
 
 	/* Download onto Inactive bank */
-
-
-	/* Can include read-write protection
-	 * Split into different functions if required
-	 * Potential expansion: Use WiFi only for this part, other boot loader functions via UART
-	 * TODO: Use boot loader memory write function */
+	execute_mem_write(&bl_rx_buffer[7], inactive_bank_adress, payload_len);
 
 	/*Update the active bank number in FLASH */
 	uint8_t num_status = update_active_bank_number(inactive_bank_adress);

@@ -62,7 +62,7 @@ void Error_Handler(void);
 void bootloader_uart_read_data(void);
 void bootloader_jump_to_active_bank(void);
 
-/*Boot loader command handling functions*/
+/*Boot loader command handling functions [in]: User Commands */
 void bootloader_handle_getver_cmd(uint8_t *bl_rx_buffer);
 void bootloader_handle_gethelp_cmd(uint8_t *pBuffer);
 void bootloader_handle_getcid_cmd(uint8_t *pBuffer);
@@ -70,8 +70,8 @@ void bootloader_handle_getrdp_cmd(uint8_t *pBuffer);
 void bootloader_handle_go_cmd(uint8_t *pBuffer);
 void bootloader_handle_mem_write_cmd(uint8_t *pBuffer);
 void bootloader_handle_flash_erase_cmd(uint8_t *pBuffer);
-void bootloader_handle_en_rw_protect(uint8_t *pBuffer);
-void bootloader_handle_dis_rw_protect(uint8_t *pBuffer);
+void bootloader_handle_en_rw_protect(uint8_t *pBuffer); /* TODO: en_rw_protect*/
+void bootloader_handle_dis_rw_protect(uint8_t *pBuffer); /* TODO: dis_rw_protect*/
 void bootloader_show_active_bank(void); /*Function of the boot loader returns active bank number */
 
 /*Boot loader helper functions*/
@@ -84,14 +84,14 @@ uint8_t get_bootloader_version(void);
 uint16_t get_mcu_chip_id(void);
 uint8_t get_flash_rdp_level(void);
 uint8_t verify_address(uint32_t go_address);
-uint8_t execute_flash_erase(uint8_t page_number , uint8_t number_of_pages);
+uint8_t execute_flash_erase(uint32_t page_number , uint32_t number_of_pages);
 uint8_t execute_mem_write(uint8_t *pBuffer, uint32_t mem_address, uint32_t len);
 
 /*Firmware update and related functions*/
 uint8_t fetch_available_firmware_version(void);
-uint8_t handle_firmware_update(void);
+uint8_t handle_firmware_update(void); /*TODO: Complete function */
 uint8_t fetch_active_bank_number(void); /*Updates the global variable with the fetched active bank value from the FLASH*/
-uint8_t update_active_bank_number(uint8_t active_bank); /* This micro-controller writes in double word */
+uint8_t update_active_bank_number(uint8_t active_bank);
 
 
 
