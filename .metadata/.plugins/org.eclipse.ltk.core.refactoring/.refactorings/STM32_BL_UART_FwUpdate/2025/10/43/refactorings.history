@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Rename resource &apos;STM32_BL_UART_FwUpdate/STM32L4_UART_Bootloader.ioc&apos; to &apos;STM32_BL_UART_FwUpdate.ioc&apos;" description="Rename resource &apos;STM32L4_UART_Bootloader.ioc&apos;" flags="7" id="org.eclipse.ltk.core.refactoring.rename.resource" input="STM32L4_UART_Bootloader.ioc" name="STM32_BL_UART_FwUpdate.ioc" stamp="1761074612624" updateReferences="true"/>
+</session>

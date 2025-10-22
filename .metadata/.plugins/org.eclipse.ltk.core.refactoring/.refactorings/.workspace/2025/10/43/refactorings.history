@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Delete resource &apos;STM32_BL_UART_FwUpdate/Debug/STM32L4_UART_Bootloader.elf&apos;" deleteContents="false" description="Delete resource &apos;STM32_BL_UART_FwUpdate/Debug/STM32L4_UART_Bootloader.elf&apos;" element1="/STM32_BL_UART_FwUpdate/Debug/STM32L4_UART_Bootloader.elf" flags="7" id="org.eclipse.ltk.core.refactoring.delete.resources" resources="1" stamp="1761074474965"/>
+</session>

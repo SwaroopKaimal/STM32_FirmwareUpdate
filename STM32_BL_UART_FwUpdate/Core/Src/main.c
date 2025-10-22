@@ -38,10 +38,9 @@
 #define BL_RX_LEN 200
 #define UPDATE_RX_BUFFER_LEN 200
 
-#define FLASH_BOOTLOADER 	0x08008000 /* Bank 1 - Boot loader 32KB*/
-#define FLASH_FIRMWARE1 	0x08008000 /* Bank 1 - 480KB */
-#define FLASH_FIRMWARE2 	0x08080000 /* Bank 2 - 512KB */
-#define FLASH_METADATA	 	0 /* Bank 2 - Page dedicated for meta data - last page */
+#define FLASH_BOOTLOADER 		0x08008000 /* Bank 1 - Boot loader 32KB*/
+#define FLASH_FIRMWARE1 		0x08008000 /* Bank 1 - 480KB */
+#define FLASH_FIRMWARE2 		0x08080000 /* Bank 2 - 512KB */
 
 /* FLASH Active Bank Macros */
 #define FLASH_ACTIVE_BANK1 		1
@@ -61,6 +60,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 CRC_HandleTypeDef hcrc;
+
 UART_HandleTypeDef hlpuart1;
 UART_HandleTypeDef huart2;
 
@@ -133,6 +133,9 @@ int main(void)
   MX_USART2_UART_Init();
   MX_CRC_Init();
   /* USER CODE BEGIN 2 */
+
+  /*Initially active bank is set as FLASH_ACTIVE_BANK1 as factory setup. TODO: Write protect and other necessary operations*/
+  //update_active_bank_number(FLASH_ACTIVE_BANK1);
 
   /*Fetch the bank no. which has to be activated*/
   active_bank_number = fetch_active_bank_number();
@@ -358,10 +361,11 @@ static void MX_GPIO_Init(void)
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOH_CLK_ENABLE();
-  __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOG_CLK_ENABLE();
   HAL_PWREx_EnableVddIO2();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, LD3_Pin|LD2_Pin, GPIO_PIN_RESET);
@@ -395,14 +399,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : USB_SOF_Pin USB_ID_Pin USB_DM_Pin USB_DP_Pin */
-  GPIO_InitStruct.Pin = USB_SOF_Pin|USB_ID_Pin|USB_DM_Pin|USB_DP_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF10_OTG_FS;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
   /* USER CODE END MX_GPIO_Init_2 */
@@ -433,7 +429,7 @@ void bootloader_jump_to_active_bank()
 	 * 4. Calls it, effectively jumping to the user application.
 	 */
 
-	printmsg("BL_DEBUG_MSG:bootloader_jump_to_user_app\n");
+	printmsg("BL_DEBUG_MSG: bootloader_jump_to_user_app\n\r");
 
 	/*The first byte at address of the FLASH area holds the value of MSP and next byte holds the Reset Handler
 	 * according to ARM-Cortex Architecture */
@@ -441,10 +437,12 @@ void bootloader_jump_to_active_bank()
 	/*1. Configure the Main Stack Pointer (MSP) by reading the value form the flash base address of desired sector*/
 	/* Check which firmware bank is active and run active firmware bank*/
 
+	uint32_t resethandler_address;
+
 	if(active_bank_number == FLASH_ACTIVE_BANK1)
 	{
 
-		printmsg("BL_DEBUG_MSG: Firmware Bank 1 Active. \n");
+		printmsg("BL_DEBUG_MSG: Firmware Bank 1 Active. \n\r");
 
 		uint32_t msp_value = *(volatile uint32_t*)FLASH_FIRMWARE1;
 
@@ -454,21 +452,28 @@ void bootloader_jump_to_active_bank()
 		/* Re-map vector table to user application base address */
 		SCB->VTOR = FLASH_FIRMWARE1; /* System Control Block - Vector Table Offset Register */
 
-	}else{
+		/* Fetch the reset handler address of the user application
+		* from the location FIRMWARE_BASE_ADDRESS + 4 (32bits) */
+		resethandler_address = *(volatile uint32_t*)(FLASH_FIRMWARE1 + 4);
 
-		printmsg("BL_DEBUG_MSG: Firmware Bank 2 Active. \n");
+	}else if(active_bank_number == FLASH_ACTIVE_BANK2){
+
+		printmsg("BL_DEBUG_MSG: Firmware Bank 2 Active. \n\r");
 
 		uint32_t msp_value = *(volatile uint32_t*)FLASH_FIRMWARE2;
 
 		__set_MSP(msp_value);
 
 		SCB->VTOR = FLASH_FIRMWARE2;
+
+		resethandler_address = *(volatile uint32_t*)(FLASH_FIRMWARE2 + 4);
+	}
+	else{
+		/*If values fetched from FLASH Meta data page is not 0 or 1*/
+		printmsg("BL_DEBUG_MSG: Firmware Bank Error! \n\r");
 	}
 
-	/* 2. Now fetch the reset handler address of the user application
-	 * from the location FIRMWARE_BASE_ADDRESS + 4 (32bits)*/
 	void (*app_reset_handler)(void); /*A function pointer to hold the address of reset handler*/
-	uint32_t resethandler_address = *(volatile uint32_t*)(FLASH_FIRMWARE1 + 4);
 	app_reset_handler = (void*) resethandler_address;
 
 	/*3. Jumping to the reset handler of user application - Now this address will be loaded into the Program Counter*/
@@ -906,13 +911,12 @@ uint8_t fetch_available_firmware_version(void)
 
 uint8_t handle_firmware_update(void)
 {
-	/* Find the inactive bank address*/
-	uint64_t inactive_bank_adress;
-	inactive_bank_adress = (active_bank_number == FLASH_ACTIVE_BANK1) ? FLASH_FIRMWARE2 : FLASH_FIRMWARE1;
+	/* Find the inactive bank address and corresponding page numbers*/
+	uint64_t inactive_bank_adress = (active_bank_number == FLASH_ACTIVE_BANK1) ? FLASH_FIRMWARE2 : FLASH_FIRMWARE1;
 	uint32_t active_page_number = (active_bank_number == FLASH_ACTIVE_BANK1) ? 16 : 256;
 
-	/* Get the length and check if new firmware fit into the banks, <= 480KB (in terms of words) TODO: Add verification, roll back, other features*/
-	uint8_t write_status = 0x00;
+	/* Get the length and check if new firmware fit into the banks, <= 480KB (in terms of words) TODO: Add size check, verification, roll back, other features*/
+	// uint8_t write_status = 0x00;
 	uint8_t payload_len = bl_rx_buffer[6];
 
 	/* Erase the Inactive bank */
