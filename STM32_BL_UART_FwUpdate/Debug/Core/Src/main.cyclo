@@ -27,7 +27,7 @@
 ../Core/Src/main.c:868:9:execute_mem_write	7
 ../Core/Src/main.c:900:9:fetch_available_firmware_version	1
 ../Core/Src/main.c:912:9:handle_firmware_update	3
-../Core/Src/main.c:934:6:bootloader_show_active_bank	1
-../Core/Src/main.c:941:9:update_active_bank_number	2
-../Core/Src/main.c:967:9:fetch_active_bank_number	1
-../Core/Src/main.c:985:6:Error_Handler	1
+../Core/Src/main.c:937:6:bootloader_show_active_bank	1
+../Core/Src/main.c:944:9:update_active_bank_number	2
+../Core/Src/main.c:970:9:fetch_active_bank_number	1
+../Core/Src/main.c:988:6:Error_Handler	1

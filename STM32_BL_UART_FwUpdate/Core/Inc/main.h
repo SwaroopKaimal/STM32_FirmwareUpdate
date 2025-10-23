@@ -67,7 +67,6 @@ void bootloader_handle_getver_cmd(uint8_t *bl_rx_buffer);
 void bootloader_handle_gethelp_cmd(uint8_t *pBuffer);
 void bootloader_handle_getcid_cmd(uint8_t *pBuffer);
 void bootloader_handle_getrdp_cmd(uint8_t *pBuffer);
-void bootloader_handle_go_cmd(uint8_t *pBuffer);
 void bootloader_handle_mem_write_cmd(uint8_t *pBuffer);
 void bootloader_handle_flash_erase_cmd(uint8_t *pBuffer);
 void bootloader_handle_en_rw_protect(uint8_t *pBuffer); /* TODO: en_rw_protect*/
@@ -190,6 +189,7 @@ uint8_t update_active_bank_number(uint8_t active_bank);
 #define SRAM1_END             (SRAM1_BASE + SRAM1_SIZE)
 #define SRAM2_END             (SRAM2_BASE + SRAM2_SIZE)
 
+#define BL_FW_UPDATE_REQUIRED	0X88
 
 /* USER CODE END Private defines */
 

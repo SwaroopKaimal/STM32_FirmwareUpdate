@@ -135,7 +135,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   /*Initially active bank is set as FLASH_ACTIVE_BANK1 as factory setup. TODO: Write protect and other necessary operations*/
-  //update_active_bank_number(FLASH_ACTIVE_BANK1);
+  update_active_bank_number(FLASH_ACTIVE_BANK2);
 
   /*Fetch the bank no. which has to be activated*/
   active_bank_number = fetch_active_bank_number();
@@ -148,11 +148,11 @@ int main(void)
 	  printmsg("BL_DEBUG_MSG: Button pressed. Checking for firmware updates.\n\r");
 
 	  /*Clear the RX buffer for firmware related functions TODO: Check this logic*/
-	  memset(bl_rx_buffer, 0, BL_RX_LEN);
+	  //memset(bl_rx_buffer, 0, BL_RX_LEN);
 
 	  /* Function to return the version available on the host application */
-	  uint8_t available_version = fetch_available_firmware_version();
-	  printmsg("BL_DEBUG_MSG: Fetched version: %d \n\r", available_version);
+	  //uint8_t available_version = fetch_available_firmware_version(); TODO: Fix Flow Logic
+	  //printmsg("BL_DEBUG_MSG: Fetched version: %d \n\r", available_version);
 
 	  /* Check if the user needs to update firmware, get input via Debug UART */
 	  printmsg("BL_DEBUG_MSG: Update Firmware? Y/n \n\r");
@@ -915,12 +915,15 @@ uint8_t handle_firmware_update(void)
 	uint64_t inactive_bank_adress = (active_bank_number == FLASH_ACTIVE_BANK1) ? FLASH_FIRMWARE2 : FLASH_FIRMWARE1;
 	uint32_t active_page_number = (active_bank_number == FLASH_ACTIVE_BANK1) ? 16 : 256;
 
+	uint8_t update_request = BL_FW_UPDATE_REQUIRED;
+	bootloader_uart_write_data(&update_request, 1);
+
 	/* Get the length and check if new firmware fit into the banks, <= 480KB (in terms of words) TODO: Add size check, verification, roll back, other features*/
 	// uint8_t write_status = 0x00;
 	uint8_t payload_len = bl_rx_buffer[6];
 
 	/* Erase the Inactive bank */
-	execute_flash_erase(active_page_number , 240); /* Check flash erase logic*/
+	execute_flash_erase(active_page_number , 240); /* TODO: Check flash erase logic*/
 
 	/* Download onto Inactive bank */
 	execute_mem_write(&bl_rx_buffer[7], inactive_bank_adress, payload_len);

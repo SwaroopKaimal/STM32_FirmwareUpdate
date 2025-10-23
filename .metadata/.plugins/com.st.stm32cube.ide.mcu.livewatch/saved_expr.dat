@@ -1,2 +1,3 @@
 bl_rx_buffer
 active_bank_number
+*(0x080FF800)
