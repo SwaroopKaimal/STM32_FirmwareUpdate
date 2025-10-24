@@ -16,12 +16,13 @@ COMMAND_BL_GET_VER                                  = 0x51
 COMMAND_BL_GET_HELP                                 = 0x52
 COMMAND_BL_GET_CID                                  =0x53
 COMMAND_BL_GET_RDP_STATUS                           =0x54
+COMMAND_BL_GO_TO_ADDR                               =0x55
 COMMAND_BL_FLASH_ERASE                              =0x56
 COMMAND_BL_MEM_WRITE                                =0x57
 COMMAND_BL_EN_R_W_PROTECT                           =0x58
 COMMAND_BL_READ_SECTOR_P_STATUS                     =0x5A
 COMMAND_BL_DIS_R_W_PROTECT                          =0x5C
-COMMAND_BL_SHOW_ACTIVE_BANK                         =0x70
+COMMAND_BL_SHOW_ACTIVE_BANK                         =0x60
 
 
 #len details of the command
@@ -43,7 +44,9 @@ FIRMWARE_VERSION_REQUEST_CMD                       = 0x99
 
 
 verbose_mode = 1
+global mem_write_active
 mem_write_active =0
+
 
 #----------------------------- file ops----------------------------------------
 
@@ -316,6 +319,9 @@ def firmware_update():
     base_mem_address = input("\n   Enter the memory write address here :")
     base_mem_address = int(base_mem_address, 16)
 
+
+    #base_mem_address = int(0xFF, 16) #Send random value, bank address is alredy predetermined by STM32, whatever value sent
+
     global mem_write_active
 
     while bytes_remaining:
@@ -462,30 +468,46 @@ def decode_menu_command_code(command):
         ret_value = read_bootloader_reply(data_buf[1])
 
     elif(command == 7):
-        print("\n   Command == > BL_FLASH_ERASE")
-        data_buf[0] = COMMAND_BL_FLASH_ERASE_LEN-1 
-        data_buf[1] = COMMAND_BL_FLASH_ERASE 
-        sector_num = input("\n   Enter sector number(0-7 or 0xFF) here :")
-        sector_num = int(sector_num, 16)
-        if sector_num != 0xff:
-            nsec = int(input("\n Enter number of sectors to erase from selected sector (max 8) here: "))
+        print("\n   Command ==> BL_FLASH_ERASE")
+
+        # total command length remains same: [len][cmd][page_num][num_pages][CRC(4 bytes)]
+        data_buf[0] = COMMAND_BL_FLASH_ERASE_LEN - 1
+        data_buf[1] = COMMAND_BL_FLASH_ERASE
+
+        # Ask user for starting page number or 0xFF for mass erase
+        page_num = input("\n   Enter starting page number (0–511 or 0xFF for mass erase): ")
+        page_num = int(page_num, 16) if '0x' in page_num else int(page_num)
+
+        # Ask for number of pages to erase only if not mass erase
+        if page_num != 0xFF:
+            num_pages = int(input("\n   Enter number of pages to erase from selected page (max 511): "))
         else:
-            nsec = 0
-        data_buf[2]= sector_num 
-        data_buf[3]= nsec 
+            num_pages = 0
 
-        crc32       = get_crc(data_buf,COMMAND_BL_FLASH_ERASE_LEN-4) 
-        data_buf[4] = word_to_byte(crc32,1,1) 
-        data_buf[5] = word_to_byte(crc32,2,1) 
-        data_buf[6] = word_to_byte(crc32,3,1) 
-        data_buf[7] = word_to_byte(crc32,4,1) 
+        # Fill in payload fields
+        data_buf[2] = page_num
+        data_buf[3] = num_pages
 
-        Write_to_serial_port(data_buf[0],1)
-        
+        # Compute CRC32 (same logic as before)
+        crc32 = get_crc(data_buf, COMMAND_BL_FLASH_ERASE_LEN - 4)
+
+        # Split CRC into 4 bytes (MSB first)
+        data_buf[4] = word_to_byte(crc32, 1, 1)
+        data_buf[5] = word_to_byte(crc32, 2, 1)
+        data_buf[6] = word_to_byte(crc32, 3, 1)
+        data_buf[7] = word_to_byte(crc32, 4, 1)
+
+        # Send length first
+        Write_to_serial_port(data_buf[0], 1)
+
+        # Send remaining bytes one by one (as before)
         for i in data_buf[1:COMMAND_BL_FLASH_ERASE_LEN]:
-            Write_to_serial_port(i,COMMAND_BL_FLASH_ERASE_LEN-1)
-        
+            Write_to_serial_port(i, 1)
+
+        # Read and print the bootloader's reply
         ret_value = read_bootloader_reply(data_buf[1])
+
+
         
     elif(command == 8):
         print("\n   Command == > BL_MEM_WRITE")
@@ -559,7 +581,77 @@ def decode_menu_command_code(command):
             ret_value = read_bootloader_reply(data_buf[1])
         mem_write_active=0
 
-            
+    elif(command == 8):
+        print("\n   Command == > BL_MEM_WRITE")
+        bytes_remaining=0
+        t_len_of_file=0
+        bytes_so_far_sent = 0
+        len_to_read=0
+        base_mem_address=0
+        
+        data_buf[1] = COMMAND_BL_MEM_WRITE
+
+        #First get the total number of bytes in the .bin file.
+        t_len_of_file =calc_file_len()
+
+        #keep opening the file
+        open_the_file()
+
+        bytes_remaining = t_len_of_file - bytes_so_far_sent
+
+        base_mem_address = input("\n   Enter the memory write address here :")
+        base_mem_address = int(base_mem_address, 16)
+        
+        while(bytes_remaining):
+            mem_write_active=1
+            if(bytes_remaining >= 128):
+                len_to_read = 128
+            else:
+                len_to_read = bytes_remaining
+            #get the bytes in to buffer by reading file
+            for x in range(len_to_read):
+                file_read_value = bin_file.read(1)
+                file_read_value = bytearray(file_read_value)
+                data_buf[7+x]= int(file_read_value[0])
+            #read_the_file(&data_buf[7],len_to_read) 
+            #print("\n   base mem address = \n",base_mem_address, hex(base_mem_address)) 
+
+            #populate base mem address
+            data_buf[2] = word_to_byte(base_mem_address,1,1)
+            data_buf[3] = word_to_byte(base_mem_address,2,1)
+            data_buf[4] = word_to_byte(base_mem_address,3,1)
+            data_buf[5] = word_to_byte(base_mem_address,4,1)
+
+            data_buf[6] = len_to_read
+
+            #/* 1 byte len + 1 byte command code + 4 byte mem base address
+            #* 1 byte payload len + len_to_read is amount of bytes read from file + 4 byte CRC
+            #*/
+            mem_write_cmd_total_len = COMMAND_BL_MEM_WRITE_LEN+len_to_read
+
+            #first field is "len_to_follow"
+            data_buf[0] =mem_write_cmd_total_len-1
+
+            crc32       = get_crc(data_buf,mem_write_cmd_total_len-4)
+            data_buf[7+len_to_read] = word_to_byte(crc32,1,1)
+            data_buf[8+len_to_read] = word_to_byte(crc32,2,1)
+            data_buf[9+len_to_read] = word_to_byte(crc32,3,1)
+            data_buf[10+len_to_read] = word_to_byte(crc32,4,1)
+
+            #update base mem address for the next loop
+            base_mem_address+=len_to_read
+
+            Write_to_serial_port(data_buf[0],1)
+        
+            for i in data_buf[1:mem_write_cmd_total_len]:
+                Write_to_serial_port(i,mem_write_cmd_total_len-1)
+
+            bytes_so_far_sent+=len_to_read
+            bytes_remaining = t_len_of_file - bytes_so_far_sent
+            print("\n   bytes_so_far_sent:{0} -- bytes_remaining:{1}\n".format(bytes_so_far_sent,bytes_remaining)) 
+        
+            ret_value = read_bootloader_reply(data_buf[1])
+        mem_write_active=0        
     
     elif(command == 9):
         print("\n   Command == > BL_EN_R_W_PROTECT")
@@ -721,7 +813,7 @@ if(ret < 0):
 
 #Firmware update request check
 print("Checking if firmware update required... \n")
-time.sleep(10) #Check for request from STM32 for 10 seconds 
+time.sleep(6) #Check for request from STM32 for 10 seconds 
 
 start_time = time.time()
 update_requested = False

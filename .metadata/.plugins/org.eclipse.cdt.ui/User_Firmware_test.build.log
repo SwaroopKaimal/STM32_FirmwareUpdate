@@ -1,4 +1,4 @@
-12:45:45 **** Build of configuration Debug for project User_Firmware_test ****
+15:49:03 **** Incremental Build of configuration Debug for project User_Firmware_test ****
 make -j16 all 
 arm-none-eabi-gcc -o "User_Firmware_test.elf" @"objects.list"   -mcpu=cortex-m4 -T"D:\EmbeddedSystems\Workspace_Firmware_Update\User_Firmware_test\STM32L496ZGTXP_FLASH.ld" --specs=nosys.specs -Wl,-Map="User_Firmware_test.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 Finished building target: User_Firmware_test.elf
@@ -7,7 +7,7 @@ arm-none-eabi-size  User_Firmware_test.elf
 arm-none-eabi-objdump -h -S User_Firmware_test.elf  > "User_Firmware_test.list"
 arm-none-eabi-objcopy  -O binary User_Firmware_test.elf  "User_Firmware_test.bin"
    text	   data	    bss	    dec	    hex	filename
-   6492	     12	   1572	   8076	   1f8c	User_Firmware_test.elf
+   6496	     12	   1572	   8080	   1f90	User_Firmware_test.elf
 Finished building: default.size.stdout
  
 Finished building: User_Firmware_test.bin
@@ -15,5 +15,5 @@ Finished building: User_Firmware_test.list
  
  
 
-12:45:46 Build Finished. 0 errors, 0 warnings. (took 1s.8ms)
+15:49:04 Build Finished. 0 errors, 0 warnings. (took 957ms)
 

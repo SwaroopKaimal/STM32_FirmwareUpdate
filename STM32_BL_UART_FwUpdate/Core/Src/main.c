@@ -38,7 +38,7 @@
 #define BL_RX_LEN 200
 #define UPDATE_RX_BUFFER_LEN 200
 
-#define FLASH_BOOTLOADER 		0x08008000 /* Bank 1 - Boot loader 32KB*/
+#define FLASH_BOOTLOADER 		0x08000000 /* Bank 1 - Boot loader 32KB*/
 #define FLASH_FIRMWARE1 		0x08008000 /* Bank 1 - 480KB */
 #define FLASH_FIRMWARE2 		0x08080000 /* Bank 2 - 512KB */
 
@@ -522,9 +522,9 @@ void bootloader_uart_read_data()
 			bootloader_handle_dis_rw_protect(bl_rx_buffer);
 			break;
 		case BL_SHOW_ACTIVE_BANK:
-			bootloader_show_active_bank();
+			bootloader_show_active_bank(bl_rx_buffer);
 		default:
-			printmsg("BL_DEBUG_MSG:Invalid command code received from host \n");
+			printmsg("BL_DEBUG_MSG:Invalid command code received from host \n\r");
 			break;
 
 		}
@@ -549,14 +549,14 @@ void bootloader_handle_getver_cmd(uint8_t *bl_rx_buffer)
 	if(! bootloader_verify_crc(&bl_rx_buffer[0], command_packet_len - 4, host_crc))
 	{
 		/*Checksum is correct*/
-		printmsg("BL_DEBUG_MSG: Checksum success...!\n");
+		printmsg("BL_DEBUG_MSG: Checksum success...!\n\r");
 		bootloader_send_ack(1);
 		bl_version = get_bootloader_version();
-		printmsg("BL_DEBUG_MSG: BL_VER: %d &#x\n", bl_version, bl_version);
+		printmsg("BL_DEBUG_MSG: BL_VER: %d &#x\n\r", bl_version, bl_version);
 		bootloader_uart_write_data(&bl_version, 1); /* Sends data back to the HOST */
 
 	}else{
-		printmsg("BL_DEBUG_MSG: Checksum failed...!\n");
+		printmsg("BL_DEBUG_MSG: Checksum failed...!\n\r");
 		bootloader_send_nack();
 
 	}
@@ -566,7 +566,7 @@ void bootloader_handle_getver_cmd(uint8_t *bl_rx_buffer)
 void bootloader_handle_gethelp_cmd(uint8_t *bl_rx_buffer)
 {
     /* Handle "Get Help" command */
-	printmsg("BL_DEBUG_MSG:bootloader_handle_gethelp_cmd\n");
+	printmsg("BL_DEBUG_MSG:bootloader_handle_gethelp_cmd\n\r");
 
 	uint32_t command_packet_len = bl_rx_buffer[0] + 1;
 
@@ -574,12 +574,12 @@ void bootloader_handle_gethelp_cmd(uint8_t *bl_rx_buffer)
 
 	if(! bootloader_verify_crc(&bl_rx_buffer[0], command_packet_len - 4, host_crc))
 	{
-		printmsg("BL_DEBUG_MSG:checksum success !!\n");
+		printmsg("BL_DEBUG_MSG:checksum success !!\n\r");
 		bootloader_send_ack(sizeof(supported_commands));
 		bootloader_uart_write_data(supported_commands, sizeof(supported_commands));
 
 	}else{
-		printmsg("BL_DEBUG_MSG:checksum fail !!\n");
+		printmsg("BL_DEBUG_MSG:checksum fail !!\n\r");
 		bootloader_send_nack();
 	}
 }
@@ -587,7 +587,7 @@ void bootloader_handle_gethelp_cmd(uint8_t *bl_rx_buffer)
 void bootloader_handle_getcid_cmd(uint8_t *bl_rx_buffer)
 {
     /* Handle "Get Chip ID" command */
-	printmsg("BL_DEBUG_MSG:bootloader_handle_getcid_cmd\n");
+	printmsg("BL_DEBUG_MSG:bootloader_handle_getcid_cmd\n\r");
 
 	uint16_t bl_cid_num = 0;
 
@@ -597,13 +597,13 @@ void bootloader_handle_getcid_cmd(uint8_t *bl_rx_buffer)
 
 	if(! bootloader_verify_crc(&bl_rx_buffer[0], command_packet_len - 4, host_crc))
 	{
-		printmsg("BL_DEBUG_MSG:checksum success !!\n");
+		printmsg("BL_DEBUG_MSG:checksum success !!\n\r");
 		bootloader_send_ack(2);
 		bl_cid_num = get_mcu_chip_id();
-		printmsg("BL_DEBUG_MSG:MCU id : %d %#x !!\n",bl_cid_num, bl_cid_num);
+		printmsg("BL_DEBUG_MSG:MCU id : %d %#x !!\n\r",bl_cid_num, bl_cid_num);
 		bootloader_uart_write_data((uint8_t*)&bl_cid_num, 2);
 	}else{
-		printmsg("BL_DEBUG_MSG:checksum fail !!\n");
+		printmsg("BL_DEBUG_MSG:checksum fail !!\n\r");
 		bootloader_send_nack();
 	}
 }
@@ -611,7 +611,7 @@ void bootloader_handle_getcid_cmd(uint8_t *bl_rx_buffer)
 void bootloader_handle_getrdp_cmd(uint8_t *bl_rx_buffer)
 {
     /* Handle "Get Read Protection Level" command */
-	printmsg("BL_DEBUG_MSG:bootloader_handle_getrdp_cmd\n");
+	printmsg("BL_DEBUG_MSG:bootloader_handle_getrdp_cmd\n\r");
 
 	uint8_t rdp_level = 0x00;
 
@@ -623,56 +623,73 @@ void bootloader_handle_getrdp_cmd(uint8_t *bl_rx_buffer)
 
 	if (! bootloader_verify_crc(&bl_rx_buffer[0],command_packet_len-4,host_crc))
 	{
-		printmsg("BL_DEBUG_MSG:checksum success !!\n");
+		printmsg("BL_DEBUG_MSG:checksum success !!\n\r");
 		bootloader_send_ack(1);
 		rdp_level = get_flash_rdp_level();
-		printmsg("BL_DEBUG_MSG:RDP level: %d %#x\n",rdp_level, rdp_level);
+		printmsg("BL_DEBUG_MSG:RDP level: %d %#x\n\r",rdp_level, rdp_level);
 		bootloader_uart_write_data(&rdp_level, 1);
 
 	}else{
-		printmsg("BL_DEBUG_MSG:checksum fail !!\n");
+		printmsg("BL_DEBUG_MSG:checksum fail !!\n\r");
 		bootloader_send_nack();
 	}
 }
 
-void bootloader_handle_flash_erase_cmd(uint8_t *pBuffer) {
+void bootloader_handle_flash_erase_cmd(uint8_t *pBuffer)
+{
+    uint8_t erase_status = 0x00;
+    uint32_t command_packet_len;
+    uint32_t host_crc;
 
-  uint8_t erase_status = 0x00;
-  printmsg("BL_DEBUG_MSG:bootloader_handle_flash_erase_cmd\n");
+    printmsg("BL_DEBUG_MSG: bootloader_handle_flash_erase_cmd\n\r");
 
-  //Total length of the command packet
-  uint32_t command_packet_len = bl_rx_buffer[0]+1 ;
+    /* Get total command length and host CRC */
+    command_packet_len = bl_rx_buffer[0] + 1;
+    host_crc = *((uint32_t *)(bl_rx_buffer + command_packet_len - 4));
 
-  //extract the CRC32 sent by the Host
-  uint32_t host_crc = *((uint32_t * ) (bl_rx_buffer+command_packet_len - 4) ) ;
+    /* Verify CRC */
+    if (!bootloader_verify_crc(&bl_rx_buffer[0], command_packet_len - 4, host_crc))
+    {
+        printmsg("BL_DEBUG_MSG: CRC check success.\n\r");
+        bootloader_send_ack(1);
 
-  if (! bootloader_verify_crc(&bl_rx_buffer[0],command_packet_len-4,host_crc)) {
+        uint32_t page_number     = pBuffer[2];
+        uint32_t number_of_pages = pBuffer[3];
 
-    printmsg("BL_DEBUG_MSG:checksum success !!\n");
-    bootloader_send_ack(1);
-    printmsg("BL_DEBUG_MSG:initial_sector : %d  no_ofsectors: %d\n",pBuffer[2],pBuffer[3]);
+        printmsg("BL_DEBUG_MSG: page_number=%ld  number_of_pages=%ld\n\r", page_number, number_of_pages);
 
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14,1);
-    erase_status = execute_flash_erase(pBuffer[2] , pBuffer[3]);
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14,0);
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_SET);
 
-    printmsg("BL_DEBUG_MSG: flash erase status: %#x\n",erase_status);
+        /* Mass erase check */
+        if (page_number == 0xFF)
+        {
+            /* Convert to sentinel value used in execute_flash_erase() */
+            page_number = 0xFFFFFFFFU;
+        }
 
-    bootloader_uart_write_data(&erase_status,1);
+        erase_status = execute_flash_erase(page_number, number_of_pages);
 
-  } else {
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET);
 
-    printmsg("BL_DEBUG_MSG:checksum fail !!\n");
-    bootloader_send_nack();
-  }
+        printmsg("BL_DEBUG_MSG: flash erase status: %#x\n\r", erase_status);
+
+        /* Send erase result to host */
+        bootloader_uart_write_data(&erase_status, 1);
+    }
+    else
+    {
+        printmsg("BL_DEBUG_MSG: CRC check failed!\n\r");
+        bootloader_send_nack();
+    }
 }
+
 
 
 void bootloader_handle_mem_write_cmd(uint8_t *bl_rx_buffer)
 {
 	/* Handle "Memory Write" command */
 
-	printmsg("BL_DEBUG_MSG:bootloader_handle_mem_write_cmd\n");
+	printmsg("BL_DEBUG_MSG:bootloader_handle_mem_write_cmd\n\r");
 
 	uint8_t write_status = 0x00;
 	uint8_t payload_len = bl_rx_buffer[6];
@@ -684,14 +701,14 @@ void bootloader_handle_mem_write_cmd(uint8_t *bl_rx_buffer)
 
 	if(! bootloader_verify_crc(&bl_rx_buffer[0], command_packet_len -4, host_crc))
 	{
-		printmsg("BL_DEBUG_MSG:checksum success !!\n");
+		printmsg("BL_DEBUG_MSG:checksum success !!\n\r");
 		bootloader_send_ack(1);
-		printmsg("BL_DEBUG_MSG: mem write address : %#x\n",mem_addr);
+		printmsg("BL_DEBUG_MSG: mem write address : %#x\n\r",mem_addr);
 
 		if( verify_address(mem_addr) == ADDR_VALID ) {
 
 
-			printmsg("BL_DEBUG_MSG: valid mem write address\n");
+			printmsg("BL_DEBUG_MSG: valid mem write address\n\r");
 
 			//glow the led to indicate bootloader is currently writing to memory
 			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14,1);
@@ -705,14 +722,14 @@ void bootloader_handle_mem_write_cmd(uint8_t *bl_rx_buffer)
 			bootloader_uart_write_data(&write_status,1);
 
 		}else{
-			printmsg("BL_DEBUG_MSG: invalid mem write address\n");
+			printmsg("BL_DEBUG_MSG: invalid mem write address\n\r");
 			write_status = ADDR_INVALID;
 			//inform host that address is invalid
 			bootloader_uart_write_data(&write_status,1);
 
 		}
 	}else{
-		printmsg("BL_DEBUG_MSG:checksum fail !!\n");
+		printmsg("BL_DEBUG_MSG:checksum fail !!\n\r");
 		bootloader_send_nack();
 	}
 }
@@ -825,45 +842,50 @@ uint8_t verify_address(uint32_t go_address)
 	return ADDR_INVALID;
 }
 
-uint8_t execute_flash_erase(uint32_t page_number , uint32_t number_of_pages) {
+uint8_t execute_flash_erase(uint32_t page_number, uint32_t number_of_pages)
+{
+    FLASH_EraseInitTypeDef flashErase_handle;
+    uint32_t sectorError;
+    HAL_StatusTypeDef status;
 
-  /*Refer HAL FLASH EX codes for FLASH erase commands*/
+    /* Validate page range */
+    if ((page_number >= 512U) || ((page_number + number_of_pages) > 512U))
+        return INVALID_SECTOR;
 
-  FLASH_EraseInitTypeDef flashErase_handle;
-  uint32_t sectorError;
-  HAL_StatusTypeDef status;
-
-
-  if( number_of_pages > 511 )
-    return INVALID_SECTOR;
-
-  if( (page_number == 0xff ) || (page_number <= 511) ) {
-    if(page_number == (uint8_t) 0xff) {
-    flashErase_handle.TypeErase = FLASH_TYPEERASE_MASSERASE;
-
-    } else {
-      /*Here we are just calculating how many sectors needs to erased */
-      uint8_t remanining_page = 511 - page_number;
-      if( number_of_pages > remanining_page) {
-
-    	  number_of_pages = remanining_page;
-      }
-      flashErase_handle.TypeErase = FLASH_TYPEERASE_PAGES; /*Macro from HAL*/
-      flashErase_handle.Page = page_number; // This is the initial page
-      flashErase_handle.NbPages = number_of_pages;
-    }
-    flashErase_handle.Banks = FLASH_BANK_1;
-
-    /*Get access to the flash registers, unlock them first */
     HAL_FLASH_Unlock();
-    status = (uint8_t) HAL_FLASHEx_Erase(&flashErase_handle, &sectorError);
+
+    if (page_number == 0xFFFFFFFFU)   /* Mass Erase */
+    {
+        flashErase_handle.TypeErase = FLASH_TYPEERASE_MASSERASE;
+        flashErase_handle.Banks = FLASH_BANK_BOTH;   /* erase both banks */
+    }
+    else
+    {
+        flashErase_handle.TypeErase = FLASH_TYPEERASE_PAGES;
+
+        if (page_number < 256U)
+        {
+            flashErase_handle.Banks = FLASH_BANK_1;
+            flashErase_handle.Page  = page_number;
+        }
+        else
+        {
+            flashErase_handle.Banks = FLASH_BANK_2;
+            flashErase_handle.Page  = page_number - 256U;
+        }
+
+        flashErase_handle.NbPages = number_of_pages;
+    }
+
+    status = HAL_FLASHEx_Erase(&flashErase_handle, &sectorError);
     HAL_FLASH_Lock();
 
-    return status;
-  }
+    if (status != HAL_OK)
+        return ERASE_FAILED;
 
-  return INVALID_SECTOR;
+    return ERASE_SUCCESS;
 }
+
 
 uint8_t execute_mem_write(uint8_t *pBuffer, uint32_t mem_address, uint32_t len)
 {
@@ -912,8 +934,11 @@ uint8_t fetch_available_firmware_version(void)
 uint8_t handle_firmware_update(void)
 {
 	/* Find the inactive bank address and corresponding page numbers*/
-	uint64_t inactive_bank_adress = (active_bank_number == FLASH_ACTIVE_BANK1) ? FLASH_FIRMWARE2 : FLASH_FIRMWARE1;
-	uint32_t active_page_number = (active_bank_number == FLASH_ACTIVE_BANK1) ? 16 : 256;
+	uint32_t inactive_bank_adress = (active_bank_number == FLASH_ACTIVE_BANK1) ? FLASH_FIRMWARE2 : FLASH_FIRMWARE1;
+	uint32_t inactive_page_number = (active_bank_number == FLASH_ACTIVE_BANK1) ? 256 : 16;
+	uint8_t inactive_bank_number = (active_bank_number == FLASH_ACTIVE_BANK1) ? FLASH_ACTIVE_BANK2 : FLASH_ACTIVE_BANK1;
+
+	printmsg("BL_DEBUG_MSG: Downloading binaries to inactive bank: %d \n\r", inactive_bank_number);
 
 	uint8_t update_request = BL_FW_UPDATE_REQUIRED;
 	bootloader_uart_write_data(&update_request, 1);
@@ -923,7 +948,7 @@ uint8_t handle_firmware_update(void)
 	uint8_t payload_len = bl_rx_buffer[6];
 
 	/* Erase the Inactive bank */
-	execute_flash_erase(active_page_number , 240); /* TODO: Check flash erase logic*/
+	//execute_flash_erase(inactive_page_number , 240);
 
 	/* Download onto Inactive bank */
 	execute_mem_write(&bl_rx_buffer[7], inactive_bank_adress, payload_len);
@@ -934,11 +959,11 @@ uint8_t handle_firmware_update(void)
 	return num_status;
 }
 
-void bootloader_show_active_bank(void)
+void bootloader_show_active_bank(uint8_t *pBuffer)
 {
 	/* Variable to store the active firmware bank number - To be preserved even after powering off
 	 * One method: one dedicated page (2KB) in FLASH for configuration data - meta-data*/
-	bootloader_uart_write_data((uint8_t*)&active_bank_number, 1);
+	bootloader_uart_write_data((uint8_t*)&pBuffer[1], 1);
 }
 
 uint8_t update_active_bank_number(uint8_t active_bank)
@@ -1007,7 +1032,7 @@ void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
-     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+     ex: printf("Wrong parameters value: file %s on line %d\r\n\r", file, line) */
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */

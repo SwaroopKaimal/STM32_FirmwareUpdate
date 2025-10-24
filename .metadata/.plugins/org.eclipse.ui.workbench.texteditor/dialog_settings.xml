@@ -3,6 +3,7 @@
 	<item key="hasShownOverlayPopupBefore" value="true"/>
 	<item key="replaceBarOpen" value="false"/>
 	<list key="searchhistory">
+		<item value="bootloader_handle_go_cmd"/>
 		<item value="update_active_bank_number"/>
 		<item value="FLASH_Type_Erase"/>
 		<item value="FLASH_Banks"/>

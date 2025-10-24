@@ -71,7 +71,7 @@ void bootloader_handle_mem_write_cmd(uint8_t *pBuffer);
 void bootloader_handle_flash_erase_cmd(uint8_t *pBuffer);
 void bootloader_handle_en_rw_protect(uint8_t *pBuffer); /* TODO: en_rw_protect*/
 void bootloader_handle_dis_rw_protect(uint8_t *pBuffer); /* TODO: dis_rw_protect*/
-void bootloader_show_active_bank(void); /*Function of the boot loader returns active bank number */
+void bootloader_show_active_bank(uint8_t *pBuffer); /*Function of the boot loader returns active bank number */
 
 /*Boot loader helper functions*/
 void printmsg(char *format, ...);
@@ -183,6 +183,8 @@ uint8_t update_active_bank_number(uint8_t active_bank);
 #define ADDR_INVALID 			0x01
 
 #define INVALID_SECTOR 			0x04
+#define ERASE_FAILED			0x11
+#define ERASE_SUCCESS			0x22
 
 
 #define SRAM1_SIZE            256*1024
