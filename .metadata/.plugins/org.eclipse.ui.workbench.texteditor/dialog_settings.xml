@@ -3,8 +3,10 @@
 	<item key="hasShownOverlayPopupBefore" value="true"/>
 	<item key="replaceBarOpen" value="false"/>
 	<list key="searchhistory">
-		<item value="bootloader_handle_go_cmd"/>
 		<item value="update_active_bank_number"/>
+		<item value="\n\r"/>
+		<item value="\n"/>
+		<item value="bootloader_handle_go_cmd"/>
 		<item value="FLASH_Type_Erase"/>
 		<item value="FLASH_Banks"/>
 		<item value="#"/>
@@ -13,5 +15,8 @@
 		<item value="addr"/>
 		<item value="bank2"/>
 		<item value="bank"/>
+	</list>
+	<list key="replacehistory">
+		<item value="\n\r"/>
 	</list>
 </section>

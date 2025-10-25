@@ -1,51 +1,49 @@
-16:22:37 **** Incremental Build of configuration Debug for project STM32_BL_UART_FwUpdate ****
+01:15:01 **** Incremental Build of configuration Debug for project User_Firmware_test ****
 make -j16 all 
 arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32L496xx -c -I../Core/Inc -I../Drivers/STM32L4xx_HAL_Driver/Inc -I../Drivers/STM32L4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32L4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
-arm-none-eabi-gcc -o "STM32_BL_UART_FwUpdate.elf" @"objects.list"   -mcpu=cortex-m4 -T"D:\EmbeddedSystems\Workspace_Firmware_Update\STM32_BL_UART_FwUpdate\STM32L496ZGTXP_FLASH.ld" --specs=nosys.specs -Wl,-Map="STM32_BL_UART_FwUpdate.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
-Finished building target: STM32_BL_UART_FwUpdate.elf
+arm-none-eabi-gcc -o "User_Firmware_test.elf" @"objects.list"   -mcpu=cortex-m4 -T"D:\EmbeddedSystems\Workspace_Firmware_Update\User_Firmware_test\STM32L496ZGTXP_FLASH.ld" --specs=nosys.specs -Wl,-Map="User_Firmware_test.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: User_Firmware_test.elf
  
-arm-none-eabi-size  STM32_BL_UART_FwUpdate.elf 
-arm-none-eabi-objdump -h -S STM32_BL_UART_FwUpdate.elf  > "STM32_BL_UART_FwUpdate.list"
+arm-none-eabi-size  User_Firmware_test.elf 
+arm-none-eabi-objdump -h -S User_Firmware_test.elf  > "User_Firmware_test.list"
+arm-none-eabi-objcopy  -O binary User_Firmware_test.elf  "User_Firmware_test.bin"
    text	   data	    bss	    dec	    hex	filename
-  23680	    136	   2416	  26232	   6678	STM32_BL_UART_FwUpdate.elf
+   6492	     12	   1572	   8076	   1f8c	User_Firmware_test.elf
 Finished building: default.size.stdout
  
-Finished building: STM32_BL_UART_FwUpdate.list
+Finished building: User_Firmware_test.bin
+Finished building: User_Firmware_test.list
  
-16:23:29 **** Incremental Build of configuration Debug for project STM32_BL_UART_FwUpdate ****
+ 
+01:20:44 **** Incremental Build of configuration Debug for project User_Firmware_test ****
 make -j16 all 
-arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32L496xx -c -I../Core/Inc -I../Drivers/STM32L4xx_HAL_Driver/Inc -I../Drivers/STM32L4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32L4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
-arm-none-eabi-gcc -o "STM32_BL_UART_FwUpdate.elf" @"objects.list"   -mcpu=cortex-m4 -T"D:\EmbeddedSystems\Workspace_Firmware_Update\STM32_BL_UART_FwUpdate\STM32L496ZGTXP_FLASH.ld" --specs=nosys.specs -Wl,-Map="STM32_BL_UART_FwUpdate.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
-Finished building target: STM32_BL_UART_FwUpdate.elf
- 
-arm-none-eabi-size  STM32_BL_UART_FwUpdate.elf 
-arm-none-eabi-objdump -h -S STM32_BL_UART_FwUpdate.elf  > "STM32_BL_UART_FwUpdate.list"
+arm-none-eabi-size  User_Firmware_test.elf 
    text	   data	    bss	    dec	    hex	filename
-  23692	    136	   2416	  26244	   6684	STM32_BL_UART_FwUpdate.elf
+   6492	     12	   1572	   8076	   1f8c	User_Firmware_test.elf
 Finished building: default.size.stdout
  
-Finished building: STM32_BL_UART_FwUpdate.list
- 
-16:24:05 **** Incremental Build of configuration Debug for project STM32_BL_UART_FwUpdate ****
+01:21:10 **** Incremental Build of configuration Debug for project User_Firmware_test ****
 make -j16 all 
-arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32L496xx -c -I../Core/Inc -I../Drivers/STM32L4xx_HAL_Driver/Inc -I../Drivers/STM32L4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32L4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
-arm-none-eabi-gcc -o "STM32_BL_UART_FwUpdate.elf" @"objects.list"   -mcpu=cortex-m4 -T"D:\EmbeddedSystems\Workspace_Firmware_Update\STM32_BL_UART_FwUpdate\STM32L496ZGTXP_FLASH.ld" --specs=nosys.specs -Wl,-Map="STM32_BL_UART_FwUpdate.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
-Finished building target: STM32_BL_UART_FwUpdate.elf
+arm-none-eabi-gcc -o "User_Firmware_test.elf" @"objects.list"   -mcpu=cortex-m4 -T"D:\EmbeddedSystems\Workspace_Firmware_Update\User_Firmware_test\STM32L496ZGTXP_FLASH.ld" --specs=nosys.specs -Wl,-Map="User_Firmware_test.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: User_Firmware_test.elf
  
-arm-none-eabi-size  STM32_BL_UART_FwUpdate.elf 
-arm-none-eabi-objdump -h -S STM32_BL_UART_FwUpdate.elf  > "STM32_BL_UART_FwUpdate.list"
+arm-none-eabi-size  User_Firmware_test.elf 
+arm-none-eabi-objdump -h -S User_Firmware_test.elf  > "User_Firmware_test.list"
+arm-none-eabi-objcopy  -O binary User_Firmware_test.elf  "User_Firmware_test.bin"
    text	   data	    bss	    dec	    hex	filename
-  23692	    136	   2416	  26244	   6684	STM32_BL_UART_FwUpdate.elf
+   6492	     12	   1572	   8076	   1f8c	User_Firmware_test.elf
 Finished building: default.size.stdout
  
-Finished building: STM32_BL_UART_FwUpdate.list
+Finished building: User_Firmware_test.bin
+Finished building: User_Firmware_test.list
  
-16:25:50 **** Incremental Build of configuration Debug for project STM32_BL_UART_FwUpdate ****
+ 
+01:27:25 **** Incremental Build of configuration Debug for project STM32_BL_UART_FwUpdate ****
 make -j16 all 
 arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32L496xx -c -I../Core/Inc -I../Drivers/STM32L4xx_HAL_Driver/Inc -I../Drivers/STM32L4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32L4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
 ../Core/Src/main.c: In function 'handle_firmware_update':
-../Core/Src/main.c:938:18: warning: unused variable 'inactive_page_number' [-Wunused-variable]
-  938 |         uint32_t inactive_page_number = (active_bank_number == FLASH_ACTIVE_BANK1) ? 256 : 16;
+../Core/Src/main.c:940:18: warning: unused variable 'inactive_page_number' [-Wunused-variable]
+  940 |         uint32_t inactive_page_number = (active_bank_number == FLASH_ACTIVE_BANK1) ? 256 : 16;
       |                  ^~~~~~~~~~~~~~~~~~~~
 arm-none-eabi-gcc -o "STM32_BL_UART_FwUpdate.elf" @"objects.list"   -mcpu=cortex-m4 -T"D:\EmbeddedSystems\Workspace_Firmware_Update\STM32_BL_UART_FwUpdate\STM32L496ZGTXP_FLASH.ld" --specs=nosys.specs -Wl,-Map="STM32_BL_UART_FwUpdate.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 Finished building target: STM32_BL_UART_FwUpdate.elf
@@ -53,7 +51,25 @@ Finished building target: STM32_BL_UART_FwUpdate.elf
 arm-none-eabi-size  STM32_BL_UART_FwUpdate.elf 
 arm-none-eabi-objdump -h -S STM32_BL_UART_FwUpdate.elf  > "STM32_BL_UART_FwUpdate.list"
    text	   data	    bss	    dec	    hex	filename
-  23684	    136	   2416	  26236	   667c	STM32_BL_UART_FwUpdate.elf
+  23804	    136	   2416	  26356	   66f4	STM32_BL_UART_FwUpdate.elf
+Finished building: default.size.stdout
+ 
+Finished building: STM32_BL_UART_FwUpdate.list
+ 
+01:27:45 **** Incremental Build of configuration Debug for project STM32_BL_UART_FwUpdate ****
+make -j16 all 
+arm-none-eabi-gcc "../Core/Src/main.c" -mcpu=cortex-m4 -std=gnu11 -g3 -DDEBUG -DUSE_HAL_DRIVER -DSTM32L496xx -c -I../Core/Inc -I../Drivers/STM32L4xx_HAL_Driver/Inc -I../Drivers/STM32L4xx_HAL_Driver/Inc/Legacy -I../Drivers/CMSIS/Device/ST/STM32L4xx/Include -I../Drivers/CMSIS/Include -O0 -ffunction-sections -fdata-sections -Wall -fstack-usage -fcyclomatic-complexity -MMD -MP -MF"Core/Src/main.d" -MT"Core/Src/main.o" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -o "Core/Src/main.o"
+../Core/Src/main.c: In function 'handle_firmware_update':
+../Core/Src/main.c:940:18: warning: unused variable 'inactive_page_number' [-Wunused-variable]
+  940 |         uint32_t inactive_page_number = (active_bank_number == FLASH_ACTIVE_BANK1) ? 256 : 16;
+      |                  ^~~~~~~~~~~~~~~~~~~~
+arm-none-eabi-gcc -o "STM32_BL_UART_FwUpdate.elf" @"objects.list"   -mcpu=cortex-m4 -T"D:\EmbeddedSystems\Workspace_Firmware_Update\STM32_BL_UART_FwUpdate\STM32L496ZGTXP_FLASH.ld" --specs=nosys.specs -Wl,-Map="STM32_BL_UART_FwUpdate.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Finished building target: STM32_BL_UART_FwUpdate.elf
+ 
+arm-none-eabi-size  STM32_BL_UART_FwUpdate.elf 
+arm-none-eabi-objdump -h -S STM32_BL_UART_FwUpdate.elf  > "STM32_BL_UART_FwUpdate.list"
+   text	   data	    bss	    dec	    hex	filename
+  23800	    136	   2416	  26352	   66f0	STM32_BL_UART_FwUpdate.elf
 Finished building: default.size.stdout
  
 Finished building: STM32_BL_UART_FwUpdate.list

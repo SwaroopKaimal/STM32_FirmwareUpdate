@@ -36,7 +36,7 @@
 #define C_UART &huart2 /* Virtual Communication UART - For BL Commands (C)*/
 
 #define BL_RX_LEN 200
-#define UPDATE_RX_BUFFER_LEN 200
+
 
 #define FLASH_BOOTLOADER 		0x08000000 /* Bank 1 - Boot loader 32KB*/
 #define FLASH_FIRMWARE1 		0x08008000 /* Bank 1 - 480KB */
@@ -65,7 +65,7 @@ UART_HandleTypeDef hlpuart1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-uint8_t bl_rx_buffer[BL_RX_LEN];
+uint8_t bl_rx_buffer[BL_RX_LEN]; /* Buffer for general boot loader communications */
 
 uint8_t supported_commands[] = {
                                  BL_GET_VER ,
@@ -135,7 +135,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   /*Initially active bank is set as FLASH_ACTIVE_BANK1 as factory setup. TODO: Write protect and other necessary operations*/
-  update_active_bank_number(FLASH_ACTIVE_BANK2);
+  //update_active_bank_number(FLASH_ACTIVE_BANK2);
 
   /*Fetch the bank no. which has to be activated*/
   active_bank_number = fetch_active_bank_number();
@@ -161,6 +161,7 @@ int main(void)
 	  if(update_option == 'Y' || update_option == 'y')
 	  {
 		  /*User requires a firmware update */
+
 		  handle_firmware_update();
 
 	  }else if(update_option == 'N' || update_option == 'n')
@@ -933,7 +934,8 @@ uint8_t fetch_available_firmware_version(void)
 
 uint8_t handle_firmware_update(void)
 {
-	/* Find the inactive bank address and corresponding page numbers*/
+
+		/* Find the inactive bank address and corresponding page numbers*/
 	uint32_t inactive_bank_adress = (active_bank_number == FLASH_ACTIVE_BANK1) ? FLASH_FIRMWARE2 : FLASH_FIRMWARE1;
 	uint32_t inactive_page_number = (active_bank_number == FLASH_ACTIVE_BANK1) ? 256 : 16;
 	uint8_t inactive_bank_number = (active_bank_number == FLASH_ACTIVE_BANK1) ? FLASH_ACTIVE_BANK2 : FLASH_ACTIVE_BANK1;
@@ -943,18 +945,37 @@ uint8_t handle_firmware_update(void)
 	uint8_t update_request = BL_FW_UPDATE_REQUIRED;
 	bootloader_uart_write_data(&update_request, 1);
 
-	/* Get the length and check if new firmware fit into the banks, <= 480KB (in terms of words) TODO: Add size check, verification, roll back, other features*/
-	// uint8_t write_status = 0x00;
-	uint8_t payload_len = bl_rx_buffer[6];
+	uint32_t current_address = inactive_bank_adress;
 
-	/* Erase the Inactive bank */
-	//execute_flash_erase(inactive_page_number , 240);
+	/*TODO: Need a continuous loop here to continuously get the pay load and write*/
+	while(1)
+	{
+		memset(bl_rx_buffer, 0, BL_RX_LEN);
+		HAL_UART_Receive(C_UART, (uint8_t*)&bl_rx_buffer, 1, HAL_MAX_DELAY);
+		if(bl_rx_buffer[0] == 250)
+		{
+			printmsg("BL_DEBUG_MSG: Download Complete! \n\r");
+			break;
+		}
+		uint32_t rcv_len = bl_rx_buffer[0];
+		HAL_UART_Receive(C_UART, (uint8_t*)&bl_rx_buffer[1], rcv_len, HAL_MAX_DELAY);
 
-	/* Download onto Inactive bank */
-	execute_mem_write(&bl_rx_buffer[7], inactive_bank_adress, payload_len);
+		/* Get the length and check if new firmware fit into the banks, <= 480KB (in terms of words) TODO: Add size check, verification, roll back, other features*/
+		// uint8_t write_status = 0x00;
+		uint8_t payload_len = bl_rx_buffer[6];
+
+		/* Erase the Inactive bank */
+		//execute_flash_erase(inactive_page_number , 240);
+		//printmsg("Inactive bank erased. Ready to write. \n\r");
+
+		/* Download onto Inactive bank */
+		execute_mem_write(&bl_rx_buffer[7], current_address, payload_len);
+		current_address += payload_len;
+
+	}
 
 	/*Update the active bank number in FLASH */
-	uint8_t num_status = update_active_bank_number(inactive_bank_adress);
+	uint8_t num_status = update_active_bank_number(inactive_bank_number);
 
 	return num_status;
 }

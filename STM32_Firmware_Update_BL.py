@@ -316,11 +316,8 @@ def firmware_update():
 
     bytes_remaining = t_len_of_file - bytes_so_far_sent
 
-    base_mem_address = input("\n   Enter the memory write address here :")
-    base_mem_address = int(base_mem_address, 16)
-
-
-    #base_mem_address = int(0xFF, 16) #Send random value, bank address is alredy predetermined by STM32, whatever value sent
+    #base_mem_address = input("\n   Enter the memory write address here :")
+    base_mem_address = int('0x08008000', 16) #Send random value, bank address is alredy predetermined by STM32, whatever value sent
 
     global mem_write_active
 
@@ -339,10 +336,10 @@ def firmware_update():
             data_buf[7 + x] = int(file_read_value[0])
 
         # Populate memory address bytes
-        data_buf[2] = word_to_byte(base_mem_address, 1, 1)
-        data_buf[3] = word_to_byte(base_mem_address, 2, 1)
-        data_buf[4] = word_to_byte(base_mem_address, 3, 1)
-        data_buf[5] = word_to_byte(base_mem_address, 4, 1)
+        data_buf[2] = 0 #word_to_byte(base_mem_address, 1, 1)
+        data_buf[3] = 0 #word_to_byte(base_mem_address, 2, 1)
+        data_buf[4] = 0 #word_to_byte(base_mem_address, 3, 1)
+        data_buf[5] = 0 #word_to_byte(base_mem_address, 4, 1)
 
         data_buf[6] = len_to_read
 
@@ -374,6 +371,9 @@ def firmware_update():
             bytes_so_far_sent, bytes_remaining))
 
         ret_value = read_bootloader_reply(data_buf[1])
+    
+    #After all the packets are trasmitted, transmit a value 0x9A to the host as second byte
+    Write_to_serial_port(250, 2)
 
     mem_write_active = 0
 
