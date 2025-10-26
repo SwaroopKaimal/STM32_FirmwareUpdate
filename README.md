@@ -49,7 +49,7 @@ The bootloader runs at startup and performs the following tasks:
 |--------------------|----------------|-----------|--------------|
 | Bootloader         | 0x08000000     | 32 KB     | Custom bootloader |
 | Firmware Bank 1    | 0x08008000     | 480 KB    | Primary firmware |
-| Firmware Bank 2    | 0x08080000     | 512 KB    | Secondary firmware |
+| Firmware Bank 2    | 0x08080000     | 510 KB    | Secondary firmware |
 | Metadata Page      | 0x080FF800     | 2 KB      | Active bank info and configuration |
 
 ---
