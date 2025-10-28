@@ -105,7 +105,6 @@ All commands follow a **length-prefixed UART packet structure** with **CRC32 val
   - Debug UART (LPUART1)
   - Command UART (USART2)
 - **Push button** for entering bootloader mode
-- **LEDs (optional)** for status indication
 
 ---
 
